@@ -1,7 +1,6 @@
 ﻿"use client"
 
 import { useState } from "react"
-import { useRouter } from "next/navigation"
 
 const ASSET_LABELS: Record<string, string> = {
   renta_variable: "Renta variable",
@@ -22,14 +21,16 @@ interface Props {
 }
 
 export default function ClienteCarteraForm({ clienteId, portfolio }: Props) {
-  const router = useRouter()
   const [loading, setLoading] = useState(false)
   const [saved, setSaved] = useState(false)
+  const [error, setError] = useState("")
   const [totalValue, setTotalValue] = useState(portfolio?.total_value?.toString() || "0")
   const [ytdReturn, setYtdReturn] = useState(portfolio?.ytd_return?.toString() || "0")
   const [riskProfile, setRiskProfile] = useState(portfolio?.risk_profile || "moderado")
   const [notes, setNotes] = useState(portfolio?.notes || "")
   const [positions, setPositions] = useState(portfolio?.portfolio_positions || [])
+
+  const portfolioId = portfolio?.id || null
 
   function addPosition() {
     setPositions((prev: any[]) => [...prev, {
@@ -53,25 +54,36 @@ export default function ClienteCarteraForm({ clienteId, portfolio }: Props) {
   async function handleSave() {
     setLoading(true)
     setSaved(false)
+    setError("")
+
+    const payload = {
+      portfolioId,
+      clienteId,
+      totalValue: parseFloat(totalValue) || 0,
+      ytdReturn: parseFloat(ytdReturn) || 0,
+      riskProfile,
+      notes,
+      positions: positions.filter((p: any) => p.asset_name),
+    }
+
+    console.log("Guardando payload:", JSON.stringify(payload))
 
     const res = await fetch("/api/admin/cartera", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        portfolioId: portfolio?.id || null,
-        clienteId,
-        totalValue: parseFloat(totalValue),
-        ytdReturn: parseFloat(ytdReturn),
-        riskProfile,
-        notes,
-        positions,
-      }),
+      body: JSON.stringify(payload),
     })
+
+    const data = await res.json()
+    console.log("Respuesta:", JSON.stringify(data))
 
     if (res.ok) {
       setSaved(true)
-      router.refresh()
-      setTimeout(() => setSaved(false), 3000)
+      setTimeout(() => {
+        window.location.reload()
+      }, 1000)
+    } else {
+      setError(data.error || "Error al guardar")
     }
 
     setLoading(false)
@@ -79,6 +91,8 @@ export default function ClienteCarteraForm({ clienteId, portfolio }: Props) {
 
   return (
     <div className="bg-white rounded-xl border border-gray-200 p-6 space-y-6">
+      <div className="text-xs text-gray-400 mb-2">Portfolio ID: {portfolioId || "sin cartera"}</div>
+
       <div className="grid grid-cols-3 gap-4">
         <div>
           <label className="block text-xs font-medium text-gray-500 mb-1.5">Valor total (euro)</label>
@@ -144,13 +158,13 @@ export default function ClienteCarteraForm({ clienteId, portfolio }: Props) {
             {positions.map((pos: any, i: number) => (
               <div key={i} className="grid grid-cols-12 gap-2 items-center">
                 <input
-                  className="col-span-3 px-2 py-1.5 rounded-lg border border-gray-200 text-xs focus:outline-none focus:ring-1 focus:ring-gray-900"
+                  className="col-span-3 px-2 py-1.5 rounded-lg border border-gray-200 text-xs focus:outline-none"
                   placeholder="Nombre activo"
                   value={pos.asset_name || ""}
                   onChange={e => updatePosition(i, "asset_name", e.target.value)}
                 />
                 <select
-                  className="col-span-2 px-2 py-1.5 rounded-lg border border-gray-200 text-xs focus:outline-none focus:ring-1 focus:ring-gray-900"
+                  className="col-span-2 px-2 py-1.5 rounded-lg border border-gray-200 text-xs focus:outline-none"
                   value={pos.asset_type || "renta_variable"}
                   onChange={e => updatePosition(i, "asset_type", e.target.value)}
                 >
@@ -159,28 +173,28 @@ export default function ClienteCarteraForm({ clienteId, portfolio }: Props) {
                   ))}
                 </select>
                 <input
-                  className="col-span-2 px-2 py-1.5 rounded-lg border border-gray-200 text-xs focus:outline-none focus:ring-1 focus:ring-gray-900"
+                  className="col-span-2 px-2 py-1.5 rounded-lg border border-gray-200 text-xs focus:outline-none"
                   placeholder="Valor euro"
                   type="number"
                   value={pos.value || ""}
                   onChange={e => updatePosition(i, "value", parseFloat(e.target.value))}
                 />
                 <input
-                  className="col-span-1 px-2 py-1.5 rounded-lg border border-gray-200 text-xs focus:outline-none focus:ring-1 focus:ring-gray-900"
+                  className="col-span-1 px-2 py-1.5 rounded-lg border border-gray-200 text-xs focus:outline-none"
                   placeholder="% peso"
                   type="number"
                   value={pos.weight_pct || ""}
                   onChange={e => updatePosition(i, "weight_pct", parseFloat(e.target.value))}
                 />
                 <input
-                  className="col-span-1 px-2 py-1.5 rounded-lg border border-gray-200 text-xs focus:outline-none focus:ring-1 focus:ring-gray-900"
+                  className="col-span-1 px-2 py-1.5 rounded-lg border border-gray-200 text-xs focus:outline-none"
                   placeholder="% rent"
                   type="number"
                   value={pos.return_pct || ""}
                   onChange={e => updatePosition(i, "return_pct", parseFloat(e.target.value))}
                 />
                 <input
-                  className="col-span-2 px-2 py-1.5 rounded-lg border border-gray-200 text-xs focus:outline-none focus:ring-1 focus:ring-gray-900"
+                  className="col-span-2 px-2 py-1.5 rounded-lg border border-gray-200 text-xs focus:outline-none"
                   placeholder="ISIN opcional"
                   value={pos.isin || ""}
                   onChange={e => updatePosition(i, "isin", e.target.value)}
@@ -205,9 +219,8 @@ export default function ClienteCarteraForm({ clienteId, portfolio }: Props) {
         >
           {loading ? "Guardando..." : "Guardar cartera"}
         </button>
-        {saved && (
-          <span className="text-sm text-green-600">Guardado correctamente</span>
-        )}
+        {saved && <span className="text-sm text-green-600">Guardado correctamente</span>}
+        {error && <span className="text-sm text-red-600">{error}</span>}
       </div>
     </div>
   )
