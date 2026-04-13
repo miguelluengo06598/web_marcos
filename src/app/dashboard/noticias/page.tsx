@@ -51,7 +51,7 @@ export default async function NoticiasPage() {
                 <p className="text-sm text-gray-600 leading-relaxed whitespace-pre-line">{post.content}</p>
                 {post.pdf_url && (
                   <a href={post.pdf_url} target="_blank" rel="noopener noreferrer" className="inline-block mt-4 text-xs text-gray-600 border border-gray-200 px-3 py-1.5 rounded-lg hover:bg-gray-50 transition-colors">
-                    Descargar PDF 
+                    Descargar PDF adjunto
                   </a>
                 )}
               </div>
