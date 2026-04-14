@@ -2,8 +2,7 @@
 
 import Link from "next/link"
 import ContactForm from "./ContactForm"
-import { motion, useScroll, useTransform } from "framer-motion"
-import { useRef } from "react"
+import { motion } from "framer-motion"
 
 const fadeUp = {
   hidden: { opacity: 0, y: 30 },
@@ -12,23 +11,17 @@ const fadeUp = {
 
 const stagger = {
   hidden: {},
-  show: { transition: { staggerChildren: 0.1 } },
+  show: { transition: { staggerChildren: 0.12 } },
 }
 
 export default function HomePage() {
-  const heroRef = useRef(null)
-  const { scrollYProgress } = useScroll({ target: heroRef, offset: ["start start", "end start"] })
-  const heroY = useTransform(scrollYProgress, [0, 1], [0, -80])
-  const heroOpacity = useTransform(scrollYProgress, [0, 0.6], [1, 0])
-
   return (
     <div className="min-h-screen bg-[#0a0a0a] text-white overflow-x-hidden">
 
-      {/* Nav */}
       <motion.nav
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5, ease: "easeOut" }}
+        transition={{ duration: 0.5 }}
         className="px-6 py-5 flex items-center justify-between max-w-6xl mx-auto border-b border-white/5 sticky top-0 z-50 bg-[#0a0a0a]/80 backdrop-blur-md"
       >
         <span className="font-semibold text-white tracking-tight">WM Patrimonial</span>
@@ -41,84 +34,85 @@ export default function HomePage() {
         </div>
       </motion.nav>
 
-      {/* Hero */}
-      <section ref={heroRef} className="max-w-6xl mx-auto px-6 pt-28 pb-24 text-center relative">
+      <section className="max-w-6xl mx-auto px-6 pt-28 pb-24 text-center relative">
         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[700px] h-[400px] bg-blue-500/10 rounded-full blur-3xl pointer-events-none" />
         <div className="absolute top-20 left-1/4 w-[300px] h-[300px] bg-purple-500/5 rounded-full blur-3xl pointer-events-none" />
 
-        <motion.style variants={heroOpacity}>
-          <motion.div style={{ y: heroY, opacity: heroOpacity }}>
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ duration: 0.5 }}
-              className="inline-flex items-center gap-2 bg-white/5 border border-white/10 rounded-full px-4 py-1.5 mb-8"
-            >
-              <span className="w-1.5 h-1.5 bg-green-400 rounded-full animate-pulse"></span>
-              <span className="text-xs text-white/60">Asesoramiento independiente y sin conflictos de interes</span>
-            </motion.div>
+        <motion.div
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ duration: 0.5 }}
+          className="inline-flex items-center gap-2 bg-white/5 border border-white/10 rounded-full px-4 py-1.5 mb-8"
+        >
+          <span className="w-1.5 h-1.5 bg-green-400 rounded-full animate-pulse"></span>
+          <span className="text-xs text-white/60">Asesoramiento independiente y sin conflictos de interes</span>
+        </motion.div>
 
-            <motion.h1
-              initial={{ opacity: 0, y: 40 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.7, delay: 0.1, ease: [0.22, 1, 0.36, 1] }}
-              className="text-6xl font-semibold tracking-tight leading-tight mb-6 max-w-3xl mx-auto"
-            >
-              Tu patrimonio,<br />
-              <span className="text-white/25">gestionado con criterio</span>
-            </motion.h1>
+        <motion.h1
+          initial={{ opacity: 0, y: 40 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.7, delay: 0.1, ease: [0.22, 1, 0.36, 1] }}
+          className="text-6xl font-semibold tracking-tight leading-tight mb-6 max-w-3xl mx-auto"
+        >
+          Tu patrimonio,<br />
+          <span className="text-white/25">gestionado con criterio</span>
+        </motion.h1>
 
-            <motion.p
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, delay: 0.2 }}
-              className="text-lg text-white/40 mb-10 max-w-xl mx-auto leading-relaxed"
-            >
-              Accede a tu cartera en tiempo real. Recibe analisis del mercado. Invierte con informacion clara y sin letra pequena.
-            </motion.p>
+        <motion.p
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, delay: 0.2 }}
+          className="text-lg text-white/40 mb-10 max-w-xl mx-auto leading-relaxed"
+        >
+          Accede a tu cartera en tiempo real. Recibe analisis del mercado. Invierte con informacion clara y sin letra pequena.
+        </motion.p>
 
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, delay: 0.3 }}
-              className="flex items-center justify-center gap-3"
-            >
-              <a href="#contacto" className="bg-white text-black px-6 py-3 rounded-lg text-sm font-medium hover:bg-white/90 hover:scale-105 transition-all duration-200">
-                Solicitar informacion
-              </a>
-              <Link href="/login" className="border border-white/10 text-white/60 px-6 py-3 rounded-lg text-sm hover:bg-white/5 hover:text-white hover:scale-105 transition-all duration-200">
-                Soy cliente
-              </Link>
-            </motion.div>
-
-            {/* Stats */}
-            <motion.div
-              variants={stagger}
-              initial="hidden"
-              animate="show"
-              className="grid grid-cols-4 gap-4 mt-20 max-w-3xl mx-auto"
-            >
-              {[
-                { value: "+10 anos", label: "de experiencia" },
-                { value: "+50", label: "clientes activos" },
-                { value: "10M+", label: "patrimonio gestionado" },
-                { value: "8,2%", label: "rentabilidad media" },
-              ].map((stat) => (
-                <motion.div
-                  key={stat.label}
-                  variants={fadeUp}
-                  className="bg-white/3 border border-white/5 rounded-xl p-5 text-center hover:bg-white/5 hover:border-white/10 transition-all duration-300"
-                >
-                  <p className="text-2xl font-semibold text-white mb-1">{stat.value}</p>
-                  <p className="text-xs text-white/40">{stat.label}</p>
-                </motion.div>
-              ))}
-            </motion.div>
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, delay: 0.3 }}
+          className="flex items-center justify-center gap-3"
+        >
+          <motion.a
+            href="#contacto"
+            whileHover={{ scale: 1.04 }}
+            whileTap={{ scale: 0.97 }}
+            className="bg-white text-black px-6 py-3 rounded-lg text-sm font-medium"
+          >
+            Solicitar informacion
+          </motion.a>
+          <motion.div whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.97 }}>
+            <Link href="/login" className="border border-white/10 text-white/60 px-6 py-3 rounded-lg text-sm hover:bg-white/5 hover:text-white transition-colors inline-block">
+              Soy cliente
+            </Link>
           </motion.div>
-        </motion.style>
+        </motion.div>
+
+        <motion.div
+          variants={stagger}
+          initial="hidden"
+          animate="show"
+          className="grid grid-cols-4 gap-4 mt-20 max-w-3xl mx-auto"
+        >
+          {[
+            { value: "+10 anos", label: "de experiencia" },
+            { value: "+50", label: "clientes activos" },
+            { value: "10M+", label: "patrimonio gestionado" },
+            { value: "8,2%", label: "rentabilidad media" },
+          ].map((stat) => (
+            <motion.div
+              key={stat.label}
+              variants={fadeUp}
+              whileHover={{ scale: 1.03, borderColor: "rgba(255,255,255,0.12)" }}
+              className="bg-white/3 border border-white/5 rounded-xl p-5 text-center"
+            >
+              <p className="text-2xl font-semibold text-white mb-1">{stat.value}</p>
+              <p className="text-xs text-white/40">{stat.label}</p>
+            </motion.div>
+          ))}
+        </motion.div>
       </section>
 
-      {/* Servicios */}
       <section id="servicios" className="py-24 border-t border-white/5">
         <div className="max-w-6xl mx-auto px-6">
           <motion.div
@@ -147,8 +141,8 @@ export default function HomePage() {
               <motion.div
                 key={s.title}
                 variants={fadeUp}
-                whileHover={{ scale: 1.02, borderColor: "rgba(255,255,255,0.15)" }}
-                className="bg-white/3 border border-white/5 rounded-2xl p-6 cursor-default transition-colors"
+                whileHover={{ scale: 1.02, borderColor: "rgba(255,255,255,0.12)" }}
+                className="bg-white/3 border border-white/5 rounded-2xl p-6"
               >
                 <div className="w-10 h-10 bg-white/5 rounded-xl flex items-center justify-center mb-5 text-lg">{s.icon}</div>
                 <h3 className="font-medium text-white mb-2">{s.title}</h3>
@@ -159,15 +153,14 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* Por que yo */}
       <section className="py-24 border-t border-white/5">
         <div className="max-w-6xl mx-auto px-6">
           <div className="grid grid-cols-2 gap-16 items-center">
             <motion.div
+              variants={stagger}
               initial="hidden"
               whileInView="show"
               viewport={{ once: true, margin: "-100px" }}
-              variants={stagger}
             >
               <motion.h2 variants={fadeUp} className="text-3xl font-semibold tracking-tight mb-6">
                 Sin conflictos de interes.<br />
@@ -179,13 +172,8 @@ export default function HomePage() {
                   "Transparencia total en comisiones y rentabilidades. Sin sorpresas.",
                   "Portal personal con tu cartera actualizada en tiempo real. Disponible 24/7.",
                   "Atencion directa y personalizada. No eres un numero.",
-                ].map((item, i) => (
-                  <motion.div
-                    key={item}
-                    variants={fadeUp}
-                    custom={i}
-                    className="flex gap-3 items-start"
-                  >
+                ].map((item) => (
+                  <motion.div key={item} variants={fadeUp} className="flex gap-3 items-start">
                     <span className="text-green-400 mt-0.5 flex-shrink-0">✓</span>
                     <p className="text-sm text-white/50 leading-relaxed">{item}</p>
                   </motion.div>
@@ -214,7 +202,7 @@ export default function HomePage() {
                       initial={{ width: 0 }}
                       whileInView={{ width: "45%" }}
                       viewport={{ once: true }}
-                      transition={{ duration: 1, delay: 0.3, ease: "easeOut" }}
+                      transition={{ duration: 1, delay: 0.3 }}
                       className="h-1 bg-blue-400 rounded-full"
                     />
                   </div>
@@ -227,7 +215,7 @@ export default function HomePage() {
                       initial={{ width: 0 }}
                       whileInView={{ width: "35%" }}
                       viewport={{ once: true }}
-                      transition={{ duration: 1, delay: 0.4, ease: "easeOut" }}
+                      transition={{ duration: 1, delay: 0.4 }}
                       className="h-1 bg-green-400 rounded-full"
                     />
                   </div>
@@ -239,7 +227,6 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* CTA */}
       <section className="py-24 border-t border-white/5">
         <div className="max-w-6xl mx-auto px-6 text-center">
           <motion.div
@@ -258,7 +245,7 @@ export default function HomePage() {
               href="#contacto"
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.97 }}
-              className="bg-white text-black px-8 py-3 rounded-lg text-sm font-medium hover:bg-white/90 transition-colors inline-block"
+              className="bg-white text-black px-8 py-3 rounded-lg text-sm font-medium inline-block"
             >
               Solicitar consulta gratuita
             </motion.a>
@@ -266,7 +253,6 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* Contacto */}
       <section id="contacto" className="py-24 border-t border-white/5">
         <div className="max-w-lg mx-auto px-6">
           <motion.div
@@ -290,7 +276,6 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* Footer */}
       <footer className="border-t border-white/5 py-8">
         <div className="max-w-6xl mx-auto px-6 flex items-center justify-between">
           <span className="text-sm text-white/20">WM Patrimonial</span>
