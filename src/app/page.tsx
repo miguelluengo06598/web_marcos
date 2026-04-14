@@ -1,287 +1,405 @@
-"use client"
+﻿"use client"
 
 import Link from "next/link"
 import ContactForm from "./ContactForm"
-import { motion } from "framer-motion"
+import { motion, useMotionValue, useTransform, animate } from "framer-motion"
+import { useEffect, useState, useRef } from "react"
 
-const fadeUp = {
-  hidden: { opacity: 0, y: 30 },
-  show: { opacity: 1, y: 0, transition: { duration: 0.6, ease: "easeOut" } },
+function Counter({ to, suffix = "" }: { to: number; suffix?: string }) {
+  const [val, setVal] = useState(0)
+  const ref = useRef(false)
+  useEffect(() => {
+    if (ref.current) return
+    ref.current = true
+    const controls = animate(0, to, {
+      duration: 2,
+      ease: "easeOut",
+      onUpdate: (v) => setVal(Math.round(v)),
+    })
+    return () => controls.stop()
+  }, [to])
+  return <span>{val}{suffix}</span>
 }
 
-const stagger = {
-  hidden: {},
-  show: { transition: { staggerChildren: 0.12 } },
+const fadeUp = {
+  hidden: { opacity: 0, y: 24 },
+  show: (i: number = 0) => ({
+    opacity: 1,
+    y: 0,
+    transition: { duration: 0.55, delay: i * 0.08, ease: "easeOut" as const },
+  }),
 }
 
 export default function HomePage() {
-  return (
-    <div className="min-h-screen bg-[#0a0a0a] text-white overflow-x-hidden">
+  const [inView, setInView] = useState(false)
+  const statsRef = useRef<HTMLDivElement>(null)
 
+  useEffect(() => {
+    const obs = new IntersectionObserver(([e]) => { if (e.isIntersecting) setInView(true) }, { threshold: 0.3 })
+    if (statsRef.current) obs.observe(statsRef.current)
+    return () => obs.disconnect()
+  }, [])
+
+  return (
+    <div className="min-h-screen bg-[#080808] text-white overflow-x-hidden">
+
+      {/* Noise overlay */}
+      <div className="fixed inset-0 pointer-events-none z-0 opacity-[0.03]" style={{backgroundImage: "url(\"data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E\")", backgroundRepeat: "repeat", backgroundSize: "128px"}} />
+
+      {/* Nav */}
       <motion.nav
-        initial={{ opacity: 0, y: -20 }}
+        initial={{ opacity: 0, y: -16 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5 }}
-        className="px-6 py-5 flex items-center justify-between max-w-6xl mx-auto border-b border-white/5 sticky top-0 z-50 bg-[#0a0a0a]/80 backdrop-blur-md"
+        transition={{ duration: 0.4, ease: "easeOut" }}
+        className="relative z-50 px-8 py-4 flex items-center justify-between max-w-7xl mx-auto"
       >
-        <span className="font-semibold text-white tracking-tight">WM Patrimonial</span>
-        <div className="flex items-center gap-6">
-          <a href="#servicios" className="text-sm text-white/50 hover:text-white transition-colors">Servicios</a>
-          <a href="#contacto" className="text-sm text-white/50 hover:text-white transition-colors">Contacto</a>
-          <Link href="/login" className="bg-white text-black px-4 py-2 rounded-lg text-sm font-medium hover:bg-white/90 transition-colors">
-            Acceder
-          </Link>
+        <div className="flex items-center gap-2">
+          <div className="w-6 h-6 bg-white rounded-md flex items-center justify-center">
+            <span className="text-black text-xs font-bold">W</span>
+          </div>
+          <span className="font-semibold text-white text-sm">WM Patrimonial</span>
         </div>
+        <div className="hidden md:flex items-center gap-8">
+          <a href="#servicios" className="text-sm text-white/50 hover:text-white transition-colors duration-200">Servicios</a>
+          <a href="#nosotros" className="text-sm text-white/50 hover:text-white transition-colors duration-200">Nosotros</a>
+          <a href="#contacto" className="text-sm text-white/50 hover:text-white transition-colors duration-200">Contacto</a>
+        </div>
+        <Link href="/login" className="text-sm bg-white text-black px-4 py-2 rounded-lg font-medium hover:bg-white/90 transition-colors duration-200">
+          Acceder
+        </Link>
       </motion.nav>
 
-      <section className="max-w-6xl mx-auto px-6 pt-28 pb-24 text-center relative">
-        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[700px] h-[400px] bg-blue-500/10 rounded-full blur-3xl pointer-events-none" />
-        <div className="absolute top-20 left-1/4 w-[300px] h-[300px] bg-purple-500/5 rounded-full blur-3xl pointer-events-none" />
+      {/* Hero */}
+      <section className="relative z-10 max-w-7xl mx-auto px-8 pt-20 pb-32 text-center">
+        {/* Glow orbs */}
+        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[500px] bg-gradient-to-b from-blue-600/20 to-transparent rounded-full blur-3xl pointer-events-none" />
+        <div className="absolute top-40 left-1/3 w-[400px] h-[400px] bg-purple-600/10 rounded-full blur-3xl pointer-events-none" />
+        <div className="absolute top-40 right-1/3 w-[400px] h-[400px] bg-cyan-600/10 rounded-full blur-3xl pointer-events-none" />
 
         <motion.div
-          initial={{ opacity: 0, scale: 0.95 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ duration: 0.5 }}
-          className="inline-flex items-center gap-2 bg-white/5 border border-white/10 rounded-full px-4 py-1.5 mb-8"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, delay: 0.1 }}
+          className="inline-flex items-center gap-2 bg-white/5 border border-white/10 rounded-full px-4 py-1.5 mb-8 text-xs text-white/60 backdrop-blur-sm"
         >
-          <span className="w-1.5 h-1.5 bg-green-400 rounded-full animate-pulse"></span>
-          <span className="text-xs text-white/60">Asesoramiento independiente y sin conflictos de interes</span>
+          <span className="w-1.5 h-1.5 bg-green-400 rounded-full animate-pulse" />
+          Asesoramiento independiente — sin conflictos de interes
         </motion.div>
 
         <motion.h1
-          initial={{ opacity: 0, y: 40 }}
+          initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.7, delay: 0.1, ease: "easeOut" }}
-          className="text-6xl font-semibold tracking-tight leading-tight mb-6 max-w-3xl mx-auto"
+          transition={{ duration: 0.6, delay: 0.15, ease: "easeOut" }}
+          className="text-7xl font-bold tracking-tight leading-[1.05] mb-6 max-w-4xl mx-auto"
         >
           Tu patrimonio,<br />
-          <span className="text-white/25">gestionado con criterio</span>
+          <span className="bg-gradient-to-r from-white/20 via-white/40 to-white/20 bg-clip-text text-transparent">
+            gestionado con criterio
+          </span>
         </motion.h1>
 
         <motion.p
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, delay: 0.2 }}
-          className="text-lg text-white/40 mb-10 max-w-xl mx-auto leading-relaxed"
+          transition={{ duration: 0.5, delay: 0.25 }}
+          className="text-xl text-white/40 mb-10 max-w-lg mx-auto leading-relaxed font-light"
         >
-          Accede a tu cartera en tiempo real. Recibe analisis del mercado. Invierte con informacion clara y sin letra pequena.
+          Accede a tu cartera en tiempo real. Analisis del mercado. Decisiones claras y sin letra pequena.
         </motion.p>
 
         <motion.div
-          initial={{ opacity: 0, y: 20 }}
+          initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, delay: 0.3 }}
-          className="flex items-center justify-center gap-3"
+          transition={{ duration: 0.5, delay: 0.35 }}
+          className="flex items-center justify-center gap-3 mb-6"
         >
           <motion.a
             href="#contacto"
-            whileHover={{ scale: 1.04 }}
+            whileHover={{ scale: 1.03 }}
             whileTap={{ scale: 0.97 }}
-            className="bg-white text-black px-6 py-3 rounded-lg text-sm font-medium"
+            className="bg-white text-black px-7 py-3 rounded-xl text-sm font-semibold shadow-[0_0_30px_rgba(255,255,255,0.15)]"
           >
-            Solicitar informacion
+            Solicitar informacion gratuita
           </motion.a>
-          <motion.div whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.97 }}>
-            <Link href="/login" className="border border-white/10 text-white/60 px-6 py-3 rounded-lg text-sm hover:bg-white/5 hover:text-white transition-colors inline-block">
-              Soy cliente
+          <motion.div whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}>
+            <Link href="/login" className="border border-white/10 text-white/60 px-7 py-3 rounded-xl text-sm font-medium hover:bg-white/5 hover:text-white transition-all duration-200 inline-block">
+              Soy cliente →
             </Link>
           </motion.div>
         </motion.div>
 
-        <motion.div
-          variants={stagger}
-          initial="hidden"
-          animate="show"
-          className="grid grid-cols-4 gap-4 mt-20 max-w-3xl mx-auto"
+        <motion.p
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.5, delay: 0.5 }}
+          className="text-xs text-white/25"
         >
+          Primera consulta gratuita y sin compromiso
+        </motion.p>
+
+        {/* Stats */}
+        <div ref={statsRef} className="grid grid-cols-4 gap-3 mt-20 max-w-3xl mx-auto">
           {[
-            { value: "+10 anos", label: "de experiencia" },
-            { value: "+50", label: "clientes activos" },
-            { value: "10M+", label: "patrimonio gestionado" },
-            { value: "8,2%", label: "rentabilidad media" },
-          ].map((stat) => (
+            { to: 10, suffix: "+", label: "Anos de experiencia" },
+            { to: 50, suffix: "+", label: "Clientes activos" },
+            { to: 10, suffix: "M+", label: "Euros gestionados" },
+            { to: 8, suffix: ",2%", label: "Rentabilidad media" },
+          ].map((stat, i) => (
             <motion.div
               key={stat.label}
+              custom={i}
               variants={fadeUp}
-              whileHover={{ scale: 1.03, borderColor: "rgba(255,255,255,0.12)" }}
-              className="bg-white/3 border border-white/5 rounded-xl p-5 text-center"
+              initial="hidden"
+              animate={inView ? "show" : "hidden"}
+              whileHover={{ scale: 1.04, borderColor: "rgba(255,255,255,0.12)" }}
+              className="bg-white/[0.03] border border-white/[0.06] rounded-2xl p-5 text-center backdrop-blur-sm cursor-default transition-colors"
             >
-              <p className="text-2xl font-semibold text-white mb-1">{stat.value}</p>
-              <p className="text-xs text-white/40">{stat.label}</p>
+              <p className="text-3xl font-bold text-white mb-1">
+                {inView ? <Counter to={stat.to} suffix={stat.suffix} /> : "0"}
+              </p>
+              <p className="text-xs text-white/35 leading-snug">{stat.label}</p>
             </motion.div>
           ))}
-        </motion.div>
-      </section>
-
-      <section id="servicios" className="py-24 border-t border-white/5">
-        <div className="max-w-6xl mx-auto px-6">
-          <motion.div
-            variants={stagger}
-            initial="hidden"
-            whileInView="show"
-            viewport={{ once: true, margin: "-100px" }}
-            className="text-center mb-16"
-          >
-            <motion.h2 variants={fadeUp} className="text-3xl font-semibold tracking-tight mb-4">Que ofrezco</motion.h2>
-            <motion.p variants={fadeUp} className="text-white/40 text-sm max-w-md mx-auto">Un servicio completo de gestion patrimonial, adaptado a tu situacion y objetivos.</motion.p>
-          </motion.div>
-
-          <motion.div
-            variants={stagger}
-            initial="hidden"
-            whileInView="show"
-            viewport={{ once: true, margin: "-100px" }}
-            className="grid grid-cols-3 gap-4"
-          >
-            {[
-              { icon: "?", title: "Planificacion patrimonial", desc: "Diseno de estrategias de inversion adaptadas a tus objetivos vitales y horizonte temporal." },
-              { icon: "?", title: "Gestion de carteras", desc: "Seleccion y seguimiento de activos con criterios de rentabilidad y control riguroso del riesgo." },
-              { icon: "?", title: "Asesoramiento continuo", desc: "Acceso directo a tu asesor, actualizaciones de mercado y portal personal disponible 24/7." },
-            ].map((s) => (
-              <motion.div
-                key={s.title}
-                variants={fadeUp}
-                whileHover={{ scale: 1.02, borderColor: "rgba(255,255,255,0.12)" }}
-                className="bg-white/3 border border-white/5 rounded-2xl p-6"
-              >
-                <div className="w-10 h-10 bg-white/5 rounded-xl flex items-center justify-center mb-5 text-lg">{s.icon}</div>
-                <h3 className="font-medium text-white mb-2">{s.title}</h3>
-                <p className="text-sm text-white/40 leading-relaxed">{s.desc}</p>
-              </motion.div>
-            ))}
-          </motion.div>
         </div>
       </section>
 
-      <section className="py-24 border-t border-white/5">
-        <div className="max-w-6xl mx-auto px-6">
-          <div className="grid grid-cols-2 gap-16 items-center">
+      {/* Servicios */}
+      <section id="servicios" className="relative z-10 py-28 border-t border-white/[0.06]">
+        <div className="max-w-7xl mx-auto px-8">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true, margin: "-80px" }}
+            transition={{ duration: 0.5 }}
+            className="mb-16"
+          >
+            <p className="text-xs text-white/30 uppercase tracking-widest mb-3">Servicios</p>
+            <h2 className="text-4xl font-bold tracking-tight max-w-md">Todo lo que necesitas para gestionar tu patrimonio</h2>
+          </motion.div>
+
+          <div className="grid grid-cols-3 gap-4">
+            {[
+              {
+                icon: "◎",
+                tag: "Estrategia",
+                title: "Planificacion patrimonial",
+                desc: "Diseno de estrategias de inversion adaptadas a tus objetivos vitales y horizonte temporal.",
+                color: "from-blue-500/10 to-transparent",
+              },
+              {
+                icon: "◈",
+                tag: "Inversion",
+                title: "Gestion de carteras",
+                desc: "Seleccion y seguimiento de activos con criterios de rentabilidad y control riguroso del riesgo.",
+                color: "from-purple-500/10 to-transparent",
+              },
+              {
+                icon: "◇",
+                tag: "Seguimiento",
+                title: "Asesoramiento continuo",
+                desc: "Acceso directo a tu asesor, analisis de mercado y portal personal disponible 24/7.",
+                color: "from-cyan-500/10 to-transparent",
+              },
+            ].map((s, i) => (
+              <motion.div
+                key={s.title}
+                custom={i}
+                variants={fadeUp}
+                initial="hidden"
+                whileInView="show"
+                viewport={{ once: true, margin: "-60px" }}
+                whileHover={{ scale: 1.02, borderColor: "rgba(255,255,255,0.1)" }}
+                className="relative bg-white/[0.03] border border-white/[0.06] rounded-2xl p-6 overflow-hidden cursor-default"
+              >
+                <div className={`absolute inset-0 bg-gradient-to-br ${s.color} pointer-events-none`} />
+                <div className="relative z-10">
+                  <div className="flex items-center justify-between mb-6">
+                    <span className="text-2xl">{s.icon}</span>
+                    <span className="text-xs text-white/30 bg-white/5 px-2 py-1 rounded-full border border-white/5">{s.tag}</span>
+                  </div>
+                  <h3 className="font-semibold text-white mb-2 text-lg">{s.title}</h3>
+                  <p className="text-sm text-white/40 leading-relaxed">{s.desc}</p>
+                </div>
+              </motion.div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Por que yo */}
+      <section id="nosotros" className="relative z-10 py-28 border-t border-white/[0.06]">
+        <div className="max-w-7xl mx-auto px-8">
+          <div className="grid grid-cols-2 gap-20 items-start">
             <motion.div
-              variants={stagger}
-              initial="hidden"
-              whileInView="show"
-              viewport={{ once: true, margin: "-100px" }}
+              initial={{ opacity: 0, x: -30 }}
+              whileInView={{ opacity: 1, x: 0 }}
+              viewport={{ once: true, margin: "-80px" }}
+              transition={{ duration: 0.6, ease: "easeOut" }}
             >
-              <motion.h2 variants={fadeUp} className="text-3xl font-semibold tracking-tight mb-6">
+              <p className="text-xs text-white/30 uppercase tracking-widest mb-4">Por que elegirnos</p>
+              <h2 className="text-4xl font-bold tracking-tight mb-8 leading-tight">
                 Sin conflictos de interes.<br />
                 <span className="text-white/25">Solo tu patrimonio importa.</span>
-              </motion.h2>
-              <div className="space-y-4">
+              </h2>
+              <div className="space-y-5">
                 {[
-                  "Sin vinculacion a ninguna entidad financiera. Recomiendo lo que es mejor para ti.",
-                  "Transparencia total en comisiones y rentabilidades. Sin sorpresas.",
-                  "Portal personal con tu cartera actualizada en tiempo real. Disponible 24/7.",
-                  "Atencion directa y personalizada. No eres un numero.",
-                ].map((item) => (
-                  <motion.div key={item} variants={fadeUp} className="flex gap-3 items-start">
-                    <span className="text-green-400 mt-0.5 flex-shrink-0">?</span>
-                    <p className="text-sm text-white/50 leading-relaxed">{item}</p>
+                  { title: "100% independiente", desc: "Sin vinculacion a ninguna entidad. Recomiendo lo mejor para ti, no lo que me genera mas comision." },
+                  { title: "Transparencia total", desc: "Comisiones y rentabilidades claras. Sin sorpresas ni letra pequena." },
+                  { title: "Portal 24/7", desc: "Tu cartera actualizada en tiempo real. Accede cuando quieras desde cualquier dispositivo." },
+                  { title: "Atencion directa", desc: "Hablas conmigo, no con un call center. Respondo en menos de 24 horas." },
+                ].map((item, i) => (
+                  <motion.div
+                    key={item.title}
+                    custom={i}
+                    variants={fadeUp}
+                    initial="hidden"
+                    whileInView="show"
+                    viewport={{ once: true }}
+                    className="flex gap-4 items-start"
+                  >
+                    <div className="w-5 h-5 rounded-full bg-green-400/10 border border-green-400/20 flex items-center justify-center flex-shrink-0 mt-0.5">
+                      <span className="text-green-400 text-xs">✓</span>
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-white mb-0.5">{item.title}</p>
+                      <p className="text-sm text-white/40 leading-relaxed">{item.desc}</p>
+                    </div>
                   </motion.div>
                 ))}
               </div>
             </motion.div>
 
+            {/* Card preview */}
             <motion.div
-              initial={{ opacity: 0, x: 40 }}
+              initial={{ opacity: 0, x: 30 }}
               whileInView={{ opacity: 1, x: 0 }}
-              viewport={{ once: true, margin: "-100px" }}
-              transition={{ duration: 0.7, ease: "easeOut" }}
-              className="bg-white/3 border border-white/5 rounded-2xl p-8 space-y-4"
+              viewport={{ once: true, margin: "-80px" }}
+              transition={{ duration: 0.6, ease: "easeOut" }}
+              className="space-y-3"
             >
-              <div className="bg-white/5 rounded-xl p-4 border border-white/5">
-                <p className="text-xs text-white/30 mb-1">Valor total cartera</p>
-                <p className="text-2xl font-semibold">124.850</p>
-                <p className="text-xs text-green-400 mt-0.5">+7,4% este ano</p>
+              <div className="bg-white/[0.04] border border-white/[0.08] rounded-2xl p-5">
+                <div className="flex items-center justify-between mb-4">
+                  <div>
+                    <p className="text-xs text-white/30 mb-1">Valor total cartera</p>
+                    <p className="text-3xl font-bold">124.850</p>
+                  </div>
+                  <span className="text-xs text-green-400 bg-green-400/10 border border-green-400/20 px-3 py-1 rounded-full">+7,4% YTD</span>
+                </div>
+                <div className="h-px bg-white/5 mb-4" />
+                <div className="space-y-3">
+                  {[
+                    { label: "Renta variable", pct: 45, color: "bg-blue-400" },
+                    { label: "Renta fija", pct: 35, color: "bg-green-400" },
+                    { label: "Liquidez", pct: 12, color: "bg-amber-400" },
+                    { label: "Alternativos", pct: 8, color: "bg-purple-400" },
+                  ].map((item) => (
+                    <div key={item.label}>
+                      <div className="flex justify-between text-xs mb-1.5">
+                        <span className="text-white/50">{item.label}</span>
+                        <span className="text-white/70 font-medium">{item.pct}%</span>
+                      </div>
+                      <div className="h-1 bg-white/5 rounded-full overflow-hidden">
+                        <motion.div
+                          initial={{ width: 0 }}
+                          whileInView={{ width: `${item.pct}%` }}
+                          viewport={{ once: true }}
+                          transition={{ duration: 1.2, delay: 0.2, ease: "easeOut" }}
+                          className={`h-1 ${item.color} rounded-full`}
+                        />
+                      </div>
+                    </div>
+                  ))}
+                </div>
               </div>
+
               <div className="grid grid-cols-2 gap-3">
-                <div className="bg-white/5 rounded-xl p-4 border border-white/5">
-                  <p className="text-xs text-white/30 mb-1">Renta variable</p>
-                  <p className="text-lg font-semibold">45%</p>
-                  <div className="mt-2 h-1 bg-white/10 rounded-full overflow-hidden">
-                    <motion.div
-                      initial={{ width: 0 }}
-                      whileInView={{ width: "45%" }}
-                      viewport={{ once: true }}
-                      transition={{ duration: 1, delay: 0.3 }}
-                      className="h-1 bg-blue-400 rounded-full"
-                    />
-                  </div>
+                <div className="bg-white/[0.03] border border-white/[0.06] rounded-xl p-4">
+                  <p className="text-xs text-white/30 mb-2">Ultima actualizacion</p>
+                  <p className="text-sm font-medium">Hoy, 14:32</p>
+                  <p className="text-xs text-white/30 mt-1">por tu asesor</p>
                 </div>
-                <div className="bg-white/5 rounded-xl p-4 border border-white/5">
-                  <p className="text-xs text-white/30 mb-1">Renta fija</p>
-                  <p className="text-lg font-semibold">35%</p>
-                  <div className="mt-2 h-1 bg-white/10 rounded-full overflow-hidden">
-                    <motion.div
-                      initial={{ width: 0 }}
-                      whileInView={{ width: "35%" }}
-                      viewport={{ once: true }}
-                      transition={{ duration: 1, delay: 0.4 }}
-                      className="h-1 bg-green-400 rounded-full"
-                    />
-                  </div>
+                <div className="bg-white/[0.03] border border-white/[0.06] rounded-xl p-4">
+                  <p className="text-xs text-white/30 mb-2">Proximo revision</p>
+                  <p className="text-sm font-medium">30 abr 2026</p>
+                  <p className="text-xs text-green-400 mt-1">en 15 dias</p>
                 </div>
               </div>
-              <p className="text-xs text-white/20 text-center">Vista previa del portal de cliente</p>
+
+              <p className="text-xs text-white/15 text-center pt-1">Vista previa del portal de cliente</p>
             </motion.div>
           </div>
         </div>
       </section>
 
-      <section className="py-24 border-t border-white/5">
-        <div className="max-w-6xl mx-auto px-6 text-center">
-          <motion.div
-            initial={{ opacity: 0, y: 30 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.7 }}
-            className="relative"
-          >
-            <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[400px] h-[200px] bg-blue-500/10 rounded-full blur-3xl pointer-events-none" />
-            <h2 className="text-4xl font-semibold tracking-tight mb-4 relative">
-              Empieza a gestionar<br />tu patrimonio hoy
-            </h2>
-            <p className="text-white/40 text-sm mb-8">Primera consulta gratuita y sin compromiso.</p>
-            <motion.a
-              href="#contacto"
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.97 }}
-              className="bg-white text-black px-8 py-3 rounded-lg text-sm font-medium inline-block"
-            >
-              Solicitar consulta gratuita
-            </motion.a>
-          </motion.div>
-        </div>
-      </section>
-
-      <section id="contacto" className="py-24 border-t border-white/5">
-        <div className="max-w-lg mx-auto px-6">
+      {/* CTA banner */}
+      <section className="relative z-10 py-28 border-t border-white/[0.06]">
+        <div className="max-w-7xl mx-auto px-8">
           <motion.div
             initial={{ opacity: 0, y: 30 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
             transition={{ duration: 0.6 }}
-            className="text-center mb-10"
+            className="relative bg-gradient-to-br from-white/5 to-white/[0.02] border border-white/10 rounded-3xl p-16 text-center overflow-hidden"
           >
-            <h2 className="text-3xl font-semibold tracking-tight mb-3">Hablemos</h2>
+            <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[500px] h-[300px] bg-blue-500/15 rounded-full blur-3xl pointer-events-none" />
+            <div className="relative z-10">
+              <h2 className="text-5xl font-bold tracking-tight mb-4">
+                Empieza hoy.<br />
+                <span className="text-white/30">Sin compromiso.</span>
+              </h2>
+              <p className="text-white/40 mb-10 max-w-sm mx-auto">Primera consulta gratuita. Te respondo en menos de 24 horas.</p>
+              <motion.a
+                href="#contacto"
+                whileHover={{ scale: 1.04 }}
+                whileTap={{ scale: 0.97 }}
+                className="bg-white text-black px-10 py-4 rounded-xl text-sm font-semibold inline-block shadow-[0_0_40px_rgba(255,255,255,0.2)]"
+              >
+                Solicitar consulta gratuita
+              </motion.a>
+            </div>
+          </motion.div>
+        </div>
+      </section>
+
+      {/* Contacto */}
+      <section id="contacto" className="relative z-10 py-28 border-t border-white/[0.06]">
+        <div className="max-w-xl mx-auto px-8">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.5 }}
+            className="text-center mb-12"
+          >
+            <p className="text-xs text-white/30 uppercase tracking-widest mb-3">Contacto</p>
+            <h2 className="text-4xl font-bold tracking-tight mb-3">Hablemos</h2>
             <p className="text-sm text-white/40">Sin compromiso. Te respondo en menos de 24 horas.</p>
           </motion.div>
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
-            transition={{ duration: 0.6, delay: 0.1 }}
+            transition={{ duration: 0.5, delay: 0.1 }}
           >
             <ContactForm />
           </motion.div>
         </div>
       </section>
 
-      <footer className="border-t border-white/5 py-8">
-        <div className="max-w-6xl mx-auto px-6 flex items-center justify-between">
-          <span className="text-sm text-white/20">WM Patrimonial</span>
-          <Link href="/login" className="text-sm text-white/20 hover:text-white transition-colors">
-            Acceso clientes
-          </Link>
+      {/* Footer */}
+      <footer className="relative z-10 border-t border-white/[0.06] py-8">
+        <div className="max-w-7xl mx-auto px-8 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <div className="w-5 h-5 bg-white rounded-md flex items-center justify-center">
+              <span className="text-black text-xs font-bold">W</span>
+            </div>
+            <span className="text-sm text-white/20">WM Patrimonial</span>
+          </div>
+          <div className="flex items-center gap-6">
+            <a href="#servicios" className="text-xs text-white/20 hover:text-white/50 transition-colors">Servicios</a>
+            <a href="#contacto" className="text-xs text-white/20 hover:text-white/50 transition-colors">Contacto</a>
+            <Link href="/login" className="text-xs text-white/20 hover:text-white/50 transition-colors">Acceso clientes</Link>
+          </div>
         </div>
       </footer>
 
