@@ -1,4 +1,4 @@
-﻿"use client"
+"use client"
 
 import Link from "next/link"
 import ContactForm from "./ContactForm"
@@ -6,7 +6,7 @@ import { motion } from "framer-motion"
 
 const fadeUp = {
   hidden: { opacity: 0, y: 30 },
-  show: { opacity: 1, y: 0, transition: { duration: 0.6, ease: [0.22, 1, 0.36, 1] } },
+  show: { opacity: 1, y: 0, transition: { duration: 0.6, ease: "easeOut" } },
 }
 
 const stagger = {
@@ -51,7 +51,7 @@ export default function HomePage() {
         <motion.h1
           initial={{ opacity: 0, y: 40 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.7, delay: 0.1, ease: [0.22, 1, 0.36, 1] }}
+          transition={{ duration: 0.7, delay: 0.1, ease: "easeOut" }}
           className="text-6xl font-semibold tracking-tight leading-tight mb-6 max-w-3xl mx-auto"
         >
           Tu patrimonio,<br />
@@ -134,9 +134,9 @@ export default function HomePage() {
             className="grid grid-cols-3 gap-4"
           >
             {[
-              { icon: "◎", title: "Planificacion patrimonial", desc: "Diseno de estrategias de inversion adaptadas a tus objetivos vitales y horizonte temporal." },
-              { icon: "◈", title: "Gestion de carteras", desc: "Seleccion y seguimiento de activos con criterios de rentabilidad y control riguroso del riesgo." },
-              { icon: "◇", title: "Asesoramiento continuo", desc: "Acceso directo a tu asesor, actualizaciones de mercado y portal personal disponible 24/7." },
+              { icon: "?", title: "Planificacion patrimonial", desc: "Diseno de estrategias de inversion adaptadas a tus objetivos vitales y horizonte temporal." },
+              { icon: "?", title: "Gestion de carteras", desc: "Seleccion y seguimiento de activos con criterios de rentabilidad y control riguroso del riesgo." },
+              { icon: "?", title: "Asesoramiento continuo", desc: "Acceso directo a tu asesor, actualizaciones de mercado y portal personal disponible 24/7." },
             ].map((s) => (
               <motion.div
                 key={s.title}
@@ -174,7 +174,7 @@ export default function HomePage() {
                   "Atencion directa y personalizada. No eres un numero.",
                 ].map((item) => (
                   <motion.div key={item} variants={fadeUp} className="flex gap-3 items-start">
-                    <span className="text-green-400 mt-0.5 flex-shrink-0">✓</span>
+                    <span className="text-green-400 mt-0.5 flex-shrink-0">?</span>
                     <p className="text-sm text-white/50 leading-relaxed">{item}</p>
                   </motion.div>
                 ))}
@@ -185,7 +185,7 @@ export default function HomePage() {
               initial={{ opacity: 0, x: 40 }}
               whileInView={{ opacity: 1, x: 0 }}
               viewport={{ once: true, margin: "-100px" }}
-              transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
+              transition={{ duration: 0.7, ease: "easeOut" }}
               className="bg-white/3 border border-white/5 rounded-2xl p-8 space-y-4"
             >
               <div className="bg-white/5 rounded-xl p-4 border border-white/5">
