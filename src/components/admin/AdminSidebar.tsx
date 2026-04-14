@@ -1,14 +1,14 @@
-'use client'
+﻿"use client"
 
-import Link from 'next/link'
-import { usePathname, useRouter } from 'next/navigation'
-import { createClient } from '@/lib/supabase/client'
+import Link from "next/link"
+import { usePathname, useRouter } from "next/navigation"
+import { createClient } from "@/lib/supabase/client"
 
 const nav = [
-  { href: '/admin', label: 'Resumen', icon: '▦' },
-  { href: '/admin/clientes', label: 'Clientes', icon: '◎' },
-  { href: '/admin/posts', label: 'Noticias', icon: '◈' },
-  { href: '/admin/productos', label: 'Productos', icon: '◇' },
+  { href: "/admin", label: "Resumen", icon: "▦" },
+  { href: "/admin/clientes", label: "Clientes", icon: "◎" },
+  { href: "/admin/posts", label: "Noticias", icon: "◈" },
+  { href: "/admin/productos", label: "Productos", icon: "◇" },
 ]
 
 export default function AdminSidebar() {
@@ -18,50 +18,49 @@ export default function AdminSidebar() {
 
   async function handleLogout() {
     await supabase.auth.signOut()
-    router.push('/login')
+    router.push("/login")
     router.refresh()
   }
 
   return (
-    <aside className="fixed left-0 top-0 h-full w-64 bg-white border-r border-gray-200 flex flex-col">
-      {/* Logo */}
-      <div className="p-6 border-b border-gray-100">
-        <h1 className="font-medium text-gray-900">Gestión Patrimonial</h1>
-        <span className="text-xs text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full mt-1 inline-block">
-          Panel admin
-        </span>
+    <aside style={{position: "fixed", left: 0, top: 0, height: "100vh", width: 220, background: "#0D0D0D", borderRight: "1px solid rgba(255,255,255,0.06)", display: "flex", flexDirection: "column", zIndex: 40}}>
+      <div style={{padding: "20px 16px", borderBottom: "1px solid rgba(255,255,255,0.06)"}}>
+        <div style={{display: "flex", alignItems: "center", gap: 8}}>
+          <div style={{width: 28, height: 28, borderRadius: 8, background: "linear-gradient(135deg, #22c55e, #16a34a)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, fontWeight: 700, color: "#000"}}>W</div>
+          <div>
+            <p style={{fontSize: 13, fontWeight: 700, color: "#fff", letterSpacing: "-0.01em"}}>WM Patrimonial</p>
+            <p style={{fontSize: 10, color: "rgba(255,255,255,0.25)", textTransform: "uppercase", letterSpacing: "0.1em"}}>Admin</p>
+          </div>
+        </div>
       </div>
 
-      {/* Nav */}
-      <nav className="flex-1 p-4 space-y-1">
+      <nav style={{flex: 1, padding: "12px 8px"}}>
         {nav.map(item => {
-          const active = item.href === '/admin'
-            ? pathname === '/admin'
-            : pathname.startsWith(item.href)
+          const active = item.href === "/admin" ? pathname === "/admin" : pathname.startsWith(item.href)
           return (
             <Link
               key={item.href}
               href={item.href}
-              className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors ${
-                active
-                  ? 'bg-gray-900 text-white'
-                  : 'text-gray-600 hover:bg-gray-100'
-              }`}
+              style={{
+                display: "flex", alignItems: "center", gap: 10, padding: "10px 12px", borderRadius: 8, fontSize: 13, fontWeight: 500, marginBottom: 2, transition: "all 0.15s",
+                background: active ? "rgba(34,197,94,0.1)" : "transparent",
+                color: active ? "#22c55e" : "rgba(255,255,255,0.45)",
+                border: active ? "1px solid rgba(34,197,94,0.2)" : "1px solid transparent",
+              }}
             >
-              <span className="text-base">{item.icon}</span>
+              <span style={{fontSize: 14}}>{item.icon}</span>
               {item.label}
             </Link>
           )
         })}
       </nav>
 
-      {/* Logout */}
-      <div className="p-4 border-t border-gray-100">
+      <div style={{padding: "12px 8px", borderTop: "1px solid rgba(255,255,255,0.06)"}}>
         <button
           onClick={handleLogout}
-          className="w-full text-left px-3 py-2.5 rounded-lg text-sm text-gray-500 hover:bg-gray-100 transition-colors"
+          style={{width: "100%", display: "flex", alignItems: "center", gap: 10, padding: "10px 12px", borderRadius: 8, fontSize: 13, color: "rgba(255,255,255,0.3)", background: "none", border: "none", cursor: "pointer", transition: "color 0.15s", textAlign: "left"}}
         >
-          Cerrar sesión
+          Cerrar sesion
         </button>
       </div>
     </aside>
