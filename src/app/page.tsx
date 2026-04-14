@@ -2,384 +2,477 @@
 
 import Link from "next/link"
 import ContactForm from "./ContactForm"
-import { motion, useMotionValue, useTransform, animate } from "framer-motion"
-import { useEffect, useState, useRef } from "react"
+import { motion, useScroll, useTransform, useSpring, animate } from "framer-motion"
+import { useRef, useEffect, useState } from "react"
 
-function Counter({ to, suffix = "" }: { to: number; suffix?: string }) {
-  const [val, setVal] = useState(0)
-  const ref = useRef(false)
+function useTypewriter(text: string, speed = 30, delay = 0) {
+  const [displayed, setDisplayed] = useState("")
+  const [done, setDone] = useState(false)
   useEffect(() => {
-    if (ref.current) return
-    ref.current = true
-    const controls = animate(0, to, {
-      duration: 2,
-      ease: "easeOut",
-      onUpdate: (v) => setVal(Math.round(v)),
-    })
-    return () => controls.stop()
-  }, [to])
-  return <span>{val}{suffix}</span>
+    let i = 0
+    const timer = setTimeout(() => {
+      const interval = setInterval(() => {
+        setDisplayed(text.slice(0, i + 1))
+        i++
+        if (i >= text.length) { clearInterval(interval); setDone(true) }
+      }, speed)
+      return () => clearInterval(interval)
+    }, delay)
+    return () => clearTimeout(timer)
+  }, [text, speed, delay])
+  return { displayed, done }
 }
 
-const fadeUp = {
-  hidden: { opacity: 0, y: 24 },
-  show: (i: number = 0) => ({
-    opacity: 1,
-    y: 0,
-    transition: { duration: 0.55, delay: i * 0.08, ease: "easeOut" as const },
-  }),
+function AnimatedNumber({ value, inView }: { value: number; inView: boolean }) {
+  const [display, setDisplay] = useState(0)
+  useEffect(() => {
+    if (!inView) return
+    const ctrl = animate(0, value, {
+      duration: 2,
+      ease: "easeOut",
+      onUpdate: (v) => setDisplay(Math.round(v)),
+    })
+    return () => ctrl.stop()
+  }, [inView, value])
+  return <>{display}</>
 }
 
 export default function HomePage() {
-  const [inView, setInView] = useState(false)
+  const containerRef = useRef<HTMLDivElement>(null)
   const statsRef = useRef<HTMLDivElement>(null)
+  const [statsInView, setStatsInView] = useState(false)
+  const [menuOpen, setMenuOpen] = useState(false)
+
+  const { scrollYProgress } = useScroll({ target: containerRef })
+  const heroY = useTransform(scrollYProgress, [0, 0.3], [0, -120])
+  const heroOpacity = useTransform(scrollYProgress, [0, 0.25], [1, 0])
+
+  const line1 = useTypewriter("Tu patrimonio,", 40, 300)
+  const line2 = useTypewriter("gestionado con", 40, 900)
+  const line3 = useTypewriter("criterio.", 40, 1500)
 
   useEffect(() => {
-    const obs = new IntersectionObserver(([e]) => { if (e.isIntersecting) setInView(true) }, { threshold: 0.3 })
+    const obs = new IntersectionObserver(([e]) => { if (e.isIntersecting) setStatsInView(true) }, { threshold: 0.3 })
     if (statsRef.current) obs.observe(statsRef.current)
     return () => obs.disconnect()
   }, [])
 
   return (
-    <div className="min-h-screen bg-[#080808] text-white overflow-x-hidden">
-
-      {/* Noise overlay */}
-      <div className="fixed inset-0 pointer-events-none z-0 opacity-[0.03]" style={{backgroundImage: "url(\"data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E\")", backgroundRepeat: "repeat", backgroundSize: "128px"}} />
+    <div ref={containerRef} className="min-h-screen bg-[#F4F1EB] text-[#1a1a1a] overflow-x-hidden" style={{cursor: "none"}}>
 
       {/* Nav */}
       <motion.nav
-        initial={{ opacity: 0, y: -16 }}
+        initial={{ opacity: 0, y: -10 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.4, ease: "easeOut" }}
-        className="relative z-50 px-8 py-4 flex items-center justify-between max-w-7xl mx-auto"
+        transition={{ duration: 0.7, delay: 0.1 }}
+        className="fixed top-0 left-0 right-0 z-50 px-8 py-5 flex items-center justify-between bg-[#F4F1EB]/95 backdrop-blur-sm border-b border-black/5"
       >
-        <div className="flex items-center gap-2">
-          <div className="w-6 h-6 bg-white rounded-md flex items-center justify-center">
-            <span className="text-black text-xs font-bold">W</span>
-          </div>
-          <span className="font-semibold text-white text-sm">WM Patrimonial</span>
-        </div>
-        <div className="hidden md:flex items-center gap-8">
-          <a href="#servicios" className="text-sm text-white/50 hover:text-white transition-colors duration-200">Servicios</a>
-          <a href="#nosotros" className="text-sm text-white/50 hover:text-white transition-colors duration-200">Nosotros</a>
-          <a href="#contacto" className="text-sm text-white/50 hover:text-white transition-colors duration-200">Contacto</a>
-        </div>
-        <Link href="/login" className="text-sm bg-white text-black px-4 py-2 rounded-lg font-medium hover:bg-white/90 transition-colors duration-200">
-          Acceder
-        </Link>
-      </motion.nav>
-
-      {/* Hero */}
-      <section className="relative z-10 max-w-7xl mx-auto px-8 pt-20 pb-32 text-center">
-        {/* Glow orbs */}
-        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[500px] bg-gradient-to-b from-blue-600/20 to-transparent rounded-full blur-3xl pointer-events-none" />
-        <div className="absolute top-40 left-1/3 w-[400px] h-[400px] bg-purple-600/10 rounded-full blur-3xl pointer-events-none" />
-        <div className="absolute top-40 right-1/3 w-[400px] h-[400px] bg-cyan-600/10 rounded-full blur-3xl pointer-events-none" />
-
         <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5, delay: 0.1 }}
-          className="inline-flex items-center gap-2 bg-white/5 border border-white/10 rounded-full px-4 py-1.5 mb-8 text-xs text-white/60 backdrop-blur-sm"
-        >
-          <span className="w-1.5 h-1.5 bg-green-400 rounded-full animate-pulse" />
-          Asesoramiento independiente — sin conflictos de interes
-        </motion.div>
-
-        <motion.h1
-          initial={{ opacity: 0, y: 30 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, delay: 0.15, ease: "easeOut" }}
-          className="text-7xl font-bold tracking-tight leading-[1.05] mb-6 max-w-4xl mx-auto"
-        >
-          Tu patrimonio,<br />
-          <span className="bg-gradient-to-r from-white/20 via-white/40 to-white/20 bg-clip-text text-transparent">
-            gestionado con criterio
-          </span>
-        </motion.h1>
-
-        <motion.p
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5, delay: 0.25 }}
-          className="text-xl text-white/40 mb-10 max-w-lg mx-auto leading-relaxed font-light"
-        >
-          Accede a tu cartera en tiempo real. Analisis del mercado. Decisiones claras y sin letra pequena.
-        </motion.p>
-
-        <motion.div
-          initial={{ opacity: 0, y: 16 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5, delay: 0.35 }}
-          className="flex items-center justify-center gap-3 mb-6"
-        >
-          <motion.a
-            href="#contacto"
-            whileHover={{ scale: 1.03 }}
-            whileTap={{ scale: 0.97 }}
-            className="bg-white text-black px-7 py-3 rounded-xl text-sm font-semibold shadow-[0_0_30px_rgba(255,255,255,0.15)]"
-          >
-            Solicitar informacion gratuita
-          </motion.a>
-          <motion.div whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}>
-            <Link href="/login" className="border border-white/10 text-white/60 px-7 py-3 rounded-xl text-sm font-medium hover:bg-white/5 hover:text-white transition-all duration-200 inline-block">
-              Soy cliente →
-            </Link>
-          </motion.div>
-        </motion.div>
-
-        <motion.p
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
-          transition={{ duration: 0.5, delay: 0.5 }}
-          className="text-xs text-white/25"
+          transition={{ duration: 0.5, delay: 0.3 }}
         >
-          Primera consulta gratuita y sin compromiso
-        </motion.p>
+          <Link href="/" className="text-xs font-medium tracking-[0.2em] uppercase text-black">
+            WM Patrimonial
+          </Link>
+        </motion.div>
 
-        {/* Stats */}
-        <div ref={statsRef} className="grid grid-cols-4 gap-3 mt-20 max-w-3xl mx-auto">
+        <div className="hidden md:flex items-center gap-10">
+          {["servicios", "nosotros", "contacto"].map((item, i) => (
+            <motion.a
+              key={item}
+              href={`#${item}`}
+              initial={{ opacity: 0, y: -8 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.4, delay: 0.4 + i * 0.08 }}
+              className="text-[10px] uppercase tracking-[0.2em] text-black/35 hover:text-black transition-colors duration-300"
+            >
+              {item}
+            </motion.a>
+          ))}
+        </div>
+
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.4, delay: 0.7 }}
+        >
+          <Link href="/login" className="text-[10px] uppercase tracking-[0.2em] text-black/35 hover:text-black transition-colors duration-300 border border-black/15 px-5 py-2.5 hover:border-black/50">
+            Acceder
+          </Link>
+        </motion.div>
+      </motion.nav>
+
+      {/* Hero con parallax */}
+      <motion.section
+        style={{ y: heroY, opacity: heroOpacity }}
+        className="relative min-h-screen flex flex-col justify-between pt-28 pb-12 px-8 max-w-7xl mx-auto"
+      >
+        <div className="flex items-start justify-between pt-16">
+          <div className="max-w-5xl">
+            <div className="text-[9vw] font-light leading-[1.02] tracking-[-0.03em] overflow-hidden" style={{fontFamily: "Georgia, 'Times New Roman', serif"}}>
+              <div className="overflow-hidden">
+                <motion.div
+                  initial={{ y: "100%" }}
+                  animate={{ y: 0 }}
+                  transition={{ duration: 0.9, delay: 0.2, ease: [0.16, 1, 0.3, 1] }}
+                >
+                  {line1.displayed}<span className="animate-pulse">|</span>
+                </motion.div>
+              </div>
+              <div className="overflow-hidden">
+                <motion.div
+                  initial={{ y: "100%" }}
+                  animate={{ y: 0 }}
+                  transition={{ duration: 0.9, delay: 0.5, ease: [0.16, 1, 0.3, 1] }}
+                >
+                  {line2.displayed}
+                </motion.div>
+              </div>
+              <div className="overflow-hidden">
+                <motion.div
+                  initial={{ y: "100%" }}
+                  animate={{ y: 0 }}
+                  transition={{ duration: 0.9, delay: 0.8, ease: [0.16, 1, 0.3, 1] }}
+                >
+                  <span className="italic text-black/20">{line3.displayed}</span>
+                </motion.div>
+              </div>
+            </div>
+          </div>
+
+          <motion.div
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.8, delay: 1.6 }}
+            className="text-right max-w-[220px] pt-6 hidden md:block"
+          >
+            <p className="text-[9px] uppercase tracking-[0.2em] text-black/25 mb-3">Asesoramiento</p>
+            <p className="text-xs text-black/40 leading-relaxed">
+              Independiente, personalizado y sin conflictos de interes.
+            </p>
+          </motion.div>
+        </div>
+
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.8, delay: 1.8 }}
+          className="flex items-end justify-between border-t border-black/10 pt-8 mt-auto"
+        >
+          <div className="flex items-center gap-6">
+            <a href="#servicios" className="text-[10px] uppercase tracking-[0.2em] text-black/40 hover:text-black transition-colors flex items-center gap-2 group">
+              <span>Descubrir</span>
+              <motion.span
+                animate={{ y: [0, 3, 0] }}
+                transition={{ repeat: Infinity, duration: 1.5, ease: "easeInOut" }}
+              >↓</motion.span>
+            </a>
+            <motion.a
+              href="#contacto"
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              className="text-[10px] uppercase tracking-[0.2em] bg-black text-white px-7 py-3.5 hover:bg-black/80 transition-colors"
+            >
+              Primera consulta gratuita
+            </motion.a>
+          </div>
+          <div className="hidden md:flex items-center gap-8">
+            {["+10 anos", "+50 clientes", "10M+ gestionados"].map((s, i) => (
+              <motion.span
+                key={s}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 2 + i * 0.1 }}
+                className="text-[9px] text-black/25 uppercase tracking-[0.15em]"
+              >
+                {s}
+              </motion.span>
+            ))}
+          </div>
+        </motion.div>
+      </motion.section>
+
+      {/* Intro */}
+      <section className="border-t border-black/8 py-24 px-8 max-w-7xl mx-auto">
+        <div className="grid grid-cols-12 gap-8">
+          <div className="col-span-2">
+            <motion.p
+              initial={{ opacity: 0 }}
+              whileInView={{ opacity: 1 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.8 }}
+              className="text-[9px] uppercase tracking-[0.2em] text-black/25"
+            >
+              Que hacemos
+            </motion.p>
+          </div>
+          <div className="col-span-1">
+            <div className="w-px bg-black/8 h-full mx-auto" />
+          </div>
+          <div className="col-span-9">
+            <motion.p
+              initial={{ opacity: 0, y: 30 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true, margin: "-100px" }}
+              transition={{ duration: 1, ease: [0.16, 1, 0.3, 1] }}
+              className="text-3xl font-light leading-relaxed tracking-tight mb-8 max-w-3xl"
+              style={{fontFamily: "Georgia, 'Times New Roman', serif"}}
+            >
+              La gestion patrimonial es un reto complejo. Nuestra plataforma esta disenada para simplificarlo con transparencia, independencia y tecnologia.
+            </motion.p>
+            <motion.p
+              initial={{ opacity: 0 }}
+              whileInView={{ opacity: 1 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.8, delay: 0.3 }}
+              className="text-sm text-black/35 leading-relaxed max-w-lg"
+            >
+              Combinando analisis financiero riguroso, seguimiento en tiempo real y comunicacion directa, ofrecemos a cada cliente una vision clara de su patrimonio en cada momento.
+            </motion.p>
+          </div>
+        </div>
+      </section>
+
+      {/* Stats animados */}
+      <section ref={statsRef} className="border-t border-black/8 py-20 px-8 max-w-7xl mx-auto">
+        <div className="grid grid-cols-4 gap-0">
           {[
             { to: 10, suffix: "+", label: "Anos de experiencia" },
             { to: 50, suffix: "+", label: "Clientes activos" },
-            { to: 10, suffix: "M+", label: "Euros gestionados" },
+            { to: 10, suffix: "M+", label: "Euros bajo gestion" },
             { to: 8, suffix: ",2%", label: "Rentabilidad media" },
           ].map((stat, i) => (
             <motion.div
               key={stat.label}
-              custom={i}
-              variants={fadeUp}
-              initial="hidden"
-              animate={inView ? "show" : "hidden"}
-              whileHover={{ scale: 1.04, borderColor: "rgba(255,255,255,0.12)" }}
-              className="bg-white/[0.03] border border-white/[0.06] rounded-2xl p-5 text-center backdrop-blur-sm cursor-default transition-colors"
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.6, delay: i * 0.1 }}
+              className="border-l border-black/8 px-8 py-6 first:border-l-0"
             >
-              <p className="text-3xl font-bold text-white mb-1">
-                {inView ? <Counter to={stat.to} suffix={stat.suffix} /> : "0"}
+              <p className="text-5xl font-light mb-2 tracking-tight" style={{fontFamily: "Georgia, serif"}}>
+                <AnimatedNumber value={stat.to} inView={statsInView} />{stat.suffix}
               </p>
-              <p className="text-xs text-white/35 leading-snug">{stat.label}</p>
+              <p className="text-[10px] uppercase tracking-[0.15em] text-black/30">{stat.label}</p>
             </motion.div>
           ))}
         </div>
       </section>
 
       {/* Servicios */}
-      <section id="servicios" className="relative z-10 py-28 border-t border-white/[0.06]">
-        <div className="max-w-7xl mx-auto px-8">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true, margin: "-80px" }}
-            transition={{ duration: 0.5 }}
-            className="mb-16"
+      <section id="servicios" className="border-t border-black/8 py-24 px-8 max-w-7xl mx-auto">
+        <div className="flex items-center justify-between mb-16">
+          <motion.p
+            initial={{ opacity: 0 }}
+            whileInView={{ opacity: 1 }}
+            viewport={{ once: true }}
+            className="text-[9px] uppercase tracking-[0.2em] text-black/25"
           >
-            <p className="text-xs text-white/30 uppercase tracking-widest mb-3">Servicios</p>
-            <h2 className="text-4xl font-bold tracking-tight max-w-md">Todo lo que necesitas para gestionar tu patrimonio</h2>
-          </motion.div>
+            Servicios
+          </motion.p>
+          <p className="text-[9px] text-black/15 tracking-widest">01 / 03</p>
+        </div>
 
-          <div className="grid grid-cols-3 gap-4">
-            {[
-              {
-                icon: "◎",
-                tag: "Estrategia",
-                title: "Planificacion patrimonial",
-                desc: "Diseno de estrategias de inversion adaptadas a tus objetivos vitales y horizonte temporal.",
-                color: "from-blue-500/10 to-transparent",
-              },
-              {
-                icon: "◈",
-                tag: "Inversion",
-                title: "Gestion de carteras",
-                desc: "Seleccion y seguimiento de activos con criterios de rentabilidad y control riguroso del riesgo.",
-                color: "from-purple-500/10 to-transparent",
-              },
-              {
-                icon: "◇",
-                tag: "Seguimiento",
-                title: "Asesoramiento continuo",
-                desc: "Acceso directo a tu asesor, analisis de mercado y portal personal disponible 24/7.",
-                color: "from-cyan-500/10 to-transparent",
-              },
-            ].map((s, i) => (
-              <motion.div
-                key={s.title}
-                custom={i}
-                variants={fadeUp}
-                initial="hidden"
-                whileInView="show"
-                viewport={{ once: true, margin: "-60px" }}
-                whileHover={{ scale: 1.02, borderColor: "rgba(255,255,255,0.1)" }}
-                className="relative bg-white/[0.03] border border-white/[0.06] rounded-2xl p-6 overflow-hidden cursor-default"
-              >
-                <div className={`absolute inset-0 bg-gradient-to-br ${s.color} pointer-events-none`} />
-                <div className="relative z-10">
-                  <div className="flex items-center justify-between mb-6">
-                    <span className="text-2xl">{s.icon}</span>
-                    <span className="text-xs text-white/30 bg-white/5 px-2 py-1 rounded-full border border-white/5">{s.tag}</span>
-                  </div>
-                  <h3 className="font-semibold text-white mb-2 text-lg">{s.title}</h3>
-                  <p className="text-sm text-white/40 leading-relaxed">{s.desc}</p>
-                </div>
-              </motion.div>
-            ))}
-          </div>
+        <div>
+          {[
+            { num: "01", title: "Planificacion patrimonial", desc: "Diseno de estrategias de inversion adaptadas a tus objetivos vitales y horizonte temporal. Cada decision, justificada y transparente." },
+            { num: "02", title: "Gestion de carteras", desc: "Seleccion y seguimiento de activos con criterios de rentabilidad y control riguroso del riesgo. Posiciones actualizadas en tiempo real." },
+            { num: "03", title: "Asesoramiento continuo", desc: "Acceso directo a tu asesor, analisis periodicos del mercado y portal personal disponible 24/7 desde cualquier dispositivo." },
+          ].map((s, i) => (
+            <motion.div
+              key={s.num}
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true, margin: "-60px" }}
+              transition={{ duration: 0.7, delay: i * 0.08 }}
+              className="grid grid-cols-12 gap-8 py-12 border-t border-black/8 group cursor-default"
+            >
+              <div className="col-span-1">
+                <span className="text-[10px] text-black/20 tracking-widest">{s.num}</span>
+              </div>
+              <div className="col-span-5">
+                <h3
+                  className="text-2xl font-light group-hover:translate-x-3 transition-transform duration-700 ease-out"
+                  style={{fontFamily: "Georgia, serif"}}
+                >
+                  {s.title}
+                </h3>
+              </div>
+              <div className="col-span-5">
+                <p className="text-sm text-black/35 leading-relaxed">{s.desc}</p>
+              </div>
+              <div className="col-span-1 flex items-center justify-end">
+                <motion.span
+                  initial={{ opacity: 0, x: -10 }}
+                  whileHover={{ opacity: 1, x: 0 }}
+                  className="text-black/20 text-lg group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-500"
+                >
+                  →
+                </motion.span>
+              </div>
+            </motion.div>
+          ))}
         </div>
       </section>
 
-      {/* Por que yo */}
-      <section id="nosotros" className="relative z-10 py-28 border-t border-white/[0.06]">
-        <div className="max-w-7xl mx-auto px-8">
-          <div className="grid grid-cols-2 gap-20 items-start">
-            <motion.div
-              initial={{ opacity: 0, x: -30 }}
-              whileInView={{ opacity: 1, x: 0 }}
-              viewport={{ once: true, margin: "-80px" }}
-              transition={{ duration: 0.6, ease: "easeOut" }}
-            >
-              <p className="text-xs text-white/30 uppercase tracking-widest mb-4">Por que elegirnos</p>
-              <h2 className="text-4xl font-bold tracking-tight mb-8 leading-tight">
-                Sin conflictos de interes.<br />
-                <span className="text-white/25">Solo tu patrimonio importa.</span>
-              </h2>
-              <div className="space-y-5">
-                {[
-                  { title: "100% independiente", desc: "Sin vinculacion a ninguna entidad. Recomiendo lo mejor para ti, no lo que me genera mas comision." },
-                  { title: "Transparencia total", desc: "Comisiones y rentabilidades claras. Sin sorpresas ni letra pequena." },
-                  { title: "Portal 24/7", desc: "Tu cartera actualizada en tiempo real. Accede cuando quieras desde cualquier dispositivo." },
-                  { title: "Atencion directa", desc: "Hablas conmigo, no con un call center. Respondo en menos de 24 horas." },
-                ].map((item, i) => (
-                  <motion.div
-                    key={item.title}
-                    custom={i}
-                    variants={fadeUp}
-                    initial="hidden"
-                    whileInView="show"
-                    viewport={{ once: true }}
-                    className="flex gap-4 items-start"
-                  >
-                    <div className="w-5 h-5 rounded-full bg-green-400/10 border border-green-400/20 flex items-center justify-center flex-shrink-0 mt-0.5">
-                      <span className="text-green-400 text-xs">✓</span>
-                    </div>
-                    <div>
-                      <p className="text-sm font-medium text-white mb-0.5">{item.title}</p>
-                      <p className="text-sm text-white/40 leading-relaxed">{item.desc}</p>
-                    </div>
-                  </motion.div>
-                ))}
-              </div>
-            </motion.div>
-
-            {/* Card preview */}
-            <motion.div
-              initial={{ opacity: 0, x: 30 }}
-              whileInView={{ opacity: 1, x: 0 }}
-              viewport={{ once: true, margin: "-80px" }}
-              transition={{ duration: 0.6, ease: "easeOut" }}
-              className="space-y-3"
-            >
-              <div className="bg-white/[0.04] border border-white/[0.08] rounded-2xl p-5">
-                <div className="flex items-center justify-between mb-4">
-                  <div>
-                    <p className="text-xs text-white/30 mb-1">Valor total cartera</p>
-                    <p className="text-3xl font-bold">124.850</p>
-                  </div>
-                  <span className="text-xs text-green-400 bg-green-400/10 border border-green-400/20 px-3 py-1 rounded-full">+7,4% YTD</span>
-                </div>
-                <div className="h-px bg-white/5 mb-4" />
-                <div className="space-y-3">
-                  {[
-                    { label: "Renta variable", pct: 45, color: "bg-blue-400" },
-                    { label: "Renta fija", pct: 35, color: "bg-green-400" },
-                    { label: "Liquidez", pct: 12, color: "bg-amber-400" },
-                    { label: "Alternativos", pct: 8, color: "bg-purple-400" },
-                  ].map((item) => (
-                    <div key={item.label}>
-                      <div className="flex justify-between text-xs mb-1.5">
-                        <span className="text-white/50">{item.label}</span>
-                        <span className="text-white/70 font-medium">{item.pct}%</span>
-                      </div>
-                      <div className="h-1 bg-white/5 rounded-full overflow-hidden">
-                        <motion.div
-                          initial={{ width: 0 }}
-                          whileInView={{ width: `${item.pct}%` }}
-                          viewport={{ once: true }}
-                          transition={{ duration: 1.2, delay: 0.2, ease: "easeOut" }}
-                          className={`h-1 ${item.color} rounded-full`}
-                        />
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div className="bg-white/[0.03] border border-white/[0.06] rounded-xl p-4">
-                  <p className="text-xs text-white/30 mb-2">Ultima actualizacion</p>
-                  <p className="text-sm font-medium">Hoy, 14:32</p>
-                  <p className="text-xs text-white/30 mt-1">por tu asesor</p>
-                </div>
-                <div className="bg-white/[0.03] border border-white/[0.06] rounded-xl p-4">
-                  <p className="text-xs text-white/30 mb-2">Proximo revision</p>
-                  <p className="text-sm font-medium">30 abr 2026</p>
-                  <p className="text-xs text-green-400 mt-1">en 15 dias</p>
-                </div>
-              </div>
-
-              <p className="text-xs text-white/15 text-center pt-1">Vista previa del portal de cliente</p>
-            </motion.div>
-          </div>
-        </div>
-      </section>
-
-      {/* CTA banner */}
-      <section className="relative z-10 py-28 border-t border-white/[0.06]">
-        <div className="max-w-7xl mx-auto px-8">
+      {/* Nosotros */}
+      <section id="nosotros" className="border-t border-black/8 py-24 px-8 max-w-7xl mx-auto">
+        <div className="grid grid-cols-2 gap-20 items-start">
           <motion.div
             initial={{ opacity: 0, y: 30 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
-            transition={{ duration: 0.6 }}
-            className="relative bg-gradient-to-br from-white/5 to-white/[0.02] border border-white/10 rounded-3xl p-16 text-center overflow-hidden"
+            transition={{ duration: 0.9, ease: [0.16, 1, 0.3, 1] }}
           >
-            <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[500px] h-[300px] bg-blue-500/15 rounded-full blur-3xl pointer-events-none" />
-            <div className="relative z-10">
-              <h2 className="text-5xl font-bold tracking-tight mb-4">
-                Empieza hoy.<br />
-                <span className="text-white/30">Sin compromiso.</span>
-              </h2>
-              <p className="text-white/40 mb-10 max-w-sm mx-auto">Primera consulta gratuita. Te respondo en menos de 24 horas.</p>
-              <motion.a
-                href="#contacto"
-                whileHover={{ scale: 1.04 }}
-                whileTap={{ scale: 0.97 }}
-                className="bg-white text-black px-10 py-4 rounded-xl text-sm font-semibold inline-block shadow-[0_0_40px_rgba(255,255,255,0.2)]"
-              >
-                Solicitar consulta gratuita
-              </motion.a>
+            <p className="text-[9px] uppercase tracking-[0.2em] text-black/25 mb-10">Independencia</p>
+            <h2 className="text-4xl font-light leading-tight mb-12" style={{fontFamily: "Georgia, serif"}}>
+              Sin conflictos<br />de interes.<br />
+              <span className="italic text-black/20">Solo tu patrimonio importa.</span>
+            </h2>
+            <div className="space-y-0">
+              {[
+                { num: "01", text: "Sin vinculacion a ninguna entidad financiera. Recomiendo lo mejor para ti." },
+                { num: "02", text: "Transparencia total en comisiones y rentabilidades. Sin sorpresas." },
+                { num: "03", text: "Portal personal con tu cartera actualizada en tiempo real. 24/7." },
+                { num: "04", text: "Atencion directa y personalizada. Hablas conmigo, no con un call center." },
+              ].map((item, i) => (
+                <motion.div
+                  key={item.num}
+                  initial={{ opacity: 0, x: -15 }}
+                  whileInView={{ opacity: 1, x: 0 }}
+                  viewport={{ once: true }}
+                  transition={{ duration: 0.6, delay: i * 0.1 }}
+                  className="flex gap-6 items-start border-t border-black/8 py-5 group"
+                >
+                  <span className="text-[9px] text-black/15 tracking-widest flex-shrink-0 pt-0.5">{item.num}</span>
+                  <p className="text-sm text-black/45 leading-relaxed group-hover:text-black/70 transition-colors duration-300">{item.text}</p>
+                </motion.div>
+              ))}
             </div>
+          </motion.div>
+
+          <motion.div
+            initial={{ opacity: 0, y: 40 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.9, delay: 0.2, ease: [0.16, 1, 0.3, 1] }}
+            className="pt-16 space-y-4"
+          >
+            <div className="border border-black/8 p-7 bg-white/60 backdrop-blur-sm">
+              <div className="flex items-start justify-between mb-8">
+                <div>
+                  <p className="text-[9px] uppercase tracking-[0.2em] text-black/25 mb-2">Valor total cartera</p>
+                  <p className="text-5xl font-light tracking-tight" style={{fontFamily: "Georgia, serif"}}>124.850</p>
+                </div>
+                <span className="text-[9px] uppercase tracking-widest text-green-700 border border-green-200 bg-green-50/80 px-3 py-1.5">+7,4% YTD</span>
+              </div>
+              <div className="space-y-5">
+                {[
+                  { label: "Renta variable", pct: 45 },
+                  { label: "Renta fija", pct: 35 },
+                  { label: "Liquidez", pct: 12 },
+                  { label: "Alternativos", pct: 8 },
+                ].map((item) => (
+                  <div key={item.label} className="flex items-center gap-5">
+                    <span className="text-[9px] uppercase tracking-widest text-black/25 w-24 flex-shrink-0">{item.label}</span>
+                    <div className="flex-1 h-px bg-black/8 relative">
+                      <motion.div
+                        initial={{ width: 0 }}
+                        whileInView={{ width: `${item.pct}%` }}
+                        viewport={{ once: true }}
+                        transition={{ duration: 1.8, ease: [0.16, 1, 0.3, 1] }}
+                        className="absolute top-0 left-0 h-px bg-black/50"
+                      />
+                    </div>
+                    <span className="text-[10px] text-black/35 w-8 text-right">{item.pct}%</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div className="border border-black/8 p-5 bg-white/40">
+                <p className="text-[9px] uppercase tracking-widest text-black/20 mb-2">Ultima actualizacion</p>
+                <p className="text-sm font-light">Hoy, 14:32</p>
+                <p className="text-[9px] text-black/20 mt-1">por tu asesor</p>
+              </div>
+              <div className="border border-black/8 p-5 bg-white/40">
+                <p className="text-[9px] uppercase tracking-widest text-black/20 mb-2">Proxima revision</p>
+                <p className="text-sm font-light">30 abr 2026</p>
+                <p className="text-[9px] text-green-600 mt-1">en 15 dias</p>
+              </div>
+            </div>
+            <p className="text-[9px] text-black/15 uppercase tracking-[0.2em] text-center pt-1">Vista previa del portal de cliente</p>
           </motion.div>
         </div>
       </section>
 
-      {/* Contacto */}
-      <section id="contacto" className="relative z-10 py-28 border-t border-white/[0.06]">
-        <div className="max-w-xl mx-auto px-8">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.5 }}
-            className="text-center mb-12"
+      {/* CTA */}
+      <section className="border-t border-black/8 py-36 px-8 max-w-7xl mx-auto text-center">
+        <motion.div
+          initial={{ opacity: 0, y: 40 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ duration: 1, ease: [0.16, 1, 0.3, 1] }}
+        >
+          <p className="text-[9px] uppercase tracking-[0.25em] text-black/25 mb-10">Empezar</p>
+          <h2
+            className="text-[6vw] font-light tracking-[-0.02em] mb-12 max-w-3xl mx-auto leading-tight"
+            style={{fontFamily: "Georgia, 'Times New Roman', serif"}}
           >
-            <p className="text-xs text-white/30 uppercase tracking-widest mb-3">Contacto</p>
-            <h2 className="text-4xl font-bold tracking-tight mb-3">Hablemos</h2>
-            <p className="text-sm text-white/40">Sin compromiso. Te respondo en menos de 24 horas.</p>
-          </motion.div>
+            Reescribamos la historia de tu patrimonio.
+          </h2>
+          <motion.a
+            href="#contacto"
+            whileHover={{ scale: 1.03, backgroundColor: "#1a1a1a" }}
+            whileTap={{ scale: 0.97 }}
+            className="inline-flex items-center gap-4 text-[10px] uppercase tracking-[0.2em] border border-black px-10 py-5 hover:bg-black hover:text-white transition-all duration-400"
+          >
+            <span>Solicitar consulta gratuita</span>
+            <motion.span
+              animate={{ x: [0, 4, 0] }}
+              transition={{ repeat: Infinity, duration: 1.5 }}
+            >→</motion.span>
+          </motion.a>
+        </motion.div>
+      </section>
+
+      {/* Contacto */}
+      <section id="contacto" className="border-t border-black/8 py-24 px-8 max-w-7xl mx-auto">
+        <div className="grid grid-cols-2 gap-20">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
-            transition={{ duration: 0.5, delay: 0.1 }}
+            transition={{ duration: 0.8 }}
+          >
+            <p className="text-[9px] uppercase tracking-[0.2em] text-black/25 mb-10">Contacto</p>
+            <h2 className="text-5xl font-light leading-tight mb-8" style={{fontFamily: "Georgia, serif"}}>
+              Hablemos.
+            </h2>
+            <p className="text-sm text-black/35 leading-relaxed mb-12 max-w-xs">
+              Sin compromiso. Primera consulta gratuita. Te respondo en menos de 24 horas.
+            </p>
+            <div className="space-y-0">
+              {[
+                { label: "Experiencia", val: "+10 anos en gestion patrimonial" },
+                { label: "Clientes", val: "+50 familias e inversores" },
+                { label: "Patrimonio", val: "+10M euros bajo gestion" },
+              ].map((item) => (
+                <div key={item.label} className="flex gap-8 border-t border-black/8 py-4">
+                  <span className="text-[9px] uppercase tracking-[0.15em] text-black/20 w-20 flex-shrink-0 pt-0.5">{item.label}</span>
+                  <span className="text-xs text-black/45">{item.val}</span>
+                </div>
+              ))}
+            </div>
+          </motion.div>
+
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.8, delay: 0.15 }}
           >
             <ContactForm />
           </motion.div>
@@ -387,18 +480,14 @@ export default function HomePage() {
       </section>
 
       {/* Footer */}
-      <footer className="relative z-10 border-t border-white/[0.06] py-8">
-        <div className="max-w-7xl mx-auto px-8 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <div className="w-5 h-5 bg-white rounded-md flex items-center justify-center">
-              <span className="text-black text-xs font-bold">W</span>
-            </div>
-            <span className="text-sm text-white/20">WM Patrimonial</span>
-          </div>
-          <div className="flex items-center gap-6">
-            <a href="#servicios" className="text-xs text-white/20 hover:text-white/50 transition-colors">Servicios</a>
-            <a href="#contacto" className="text-xs text-white/20 hover:text-white/50 transition-colors">Contacto</a>
-            <Link href="/login" className="text-xs text-white/20 hover:text-white/50 transition-colors">Acceso clientes</Link>
+      <footer className="border-t border-black/8 py-8 px-8">
+        <div className="max-w-7xl mx-auto flex items-center justify-between">
+          <span className="text-[9px] uppercase tracking-[0.2em] text-black/20">WM Patrimonial</span>
+          <div className="flex items-center gap-8">
+            {["servicios", "contacto"].map((item) => (
+              <a key={item} href={`#${item}`} className="text-[9px] uppercase tracking-[0.2em] text-black/15 hover:text-black/50 transition-colors">{item}</a>
+            ))}
+            <Link href="/login" className="text-[9px] uppercase tracking-[0.2em] text-black/15 hover:text-black/50 transition-colors">Acceso clientes</Link>
           </div>
         </div>
       </footer>
