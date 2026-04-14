@@ -1,4 +1,4 @@
-﻿"use client"
+"use client"
 
 import { useState } from "react"
 
@@ -91,7 +91,7 @@ export default function ClienteCarteraForm({ clienteId, portfolio }: Props) {
 
   return (
     <div className="bg-white rounded-xl border border-gray-200 p-6 space-y-6">
-      <div className="text-xs text-gray-400 mb-2">Portfolio ID: {portfolioId || "sin cartera"}</div>
+
 
       <div className="grid grid-cols-3 gap-4">
         <div>
