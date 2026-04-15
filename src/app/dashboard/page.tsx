@@ -9,22 +9,16 @@ const ASSET_LABELS: Record<string, string> = {
 }
 
 const ASSET_COLORS: Record<string, string> = {
-  renta_variable: "#00D4FF",
-  renta_fija: "#00C98D",
-  liquidez: "#FFB800",
-  alternativo: "#a855f7",
+  renta_variable: "#3b82f6",
+  renta_fija: "#10b981",
+  liquidez: "#f59e0b",
+  alternativo: "#8b5cf6",
 }
 
-const RISK_LABEL: Record<string, string> = {
+const RISK_LABELS: Record<string, string> = {
   conservador: "Conservador",
   moderado: "Moderado",
   agresivo: "Agresivo",
-}
-
-const RISK_COLOR: Record<string, string> = {
-  conservador: "#00C98D",
-  moderado: "#FFB800",
-  agresivo: "#FF4D6A",
 }
 
 export default async function DashboardPage() {
@@ -45,514 +39,167 @@ export default async function DashboardPage() {
     .single()
 
   const positions = portfolio?.portfolio_positions || []
-  const firstName = profile?.full_name?.split(" ")[0] ?? ""
+  const firstName = profile?.full_name?.split(" ")[0] || ""
+
+  const now = new Date().toLocaleDateString("es-ES", { day: "numeric", month: "long", year: "numeric" })
 
   return (
-    <>
-      {/* Responsive styles + cursor fix */}
-      <style>{`
-        /* Restaurar cursor del sistema en el dashboard */
-        .dashboard-root,
-        .dashboard-root * {
-          cursor: auto !important;
-        }
-        .dashboard-root a,
-        .dashboard-root button {
-          cursor: pointer !important;
-        }
+    <div className="space-y-6">
 
-        .dashboard-root {
-          --font-sf: -apple-system, "SF Pro Display", "SF Pro Text", BlinkMacSystemFont, "Helvetica Neue", sans-serif;
-        }
-
-        /* Grid de KPIs */
-        .kpi-grid {
-          display: grid;
-          grid-template-columns: repeat(3, 1fr);
-          gap: 14px;
-          margin-bottom: 20px;
-        }
-
-        /* Grid de posiciones — scroll en móvil */
-        .positions-table-wrap {
-          overflow-x: auto;
-          -webkit-overflow-scrolling: touch;
-        }
-
-        /* Responsive breakpoints */
-        @media (max-width: 768px) {
-          .kpi-grid {
-            grid-template-columns: 1fr;
-            gap: 10px;
-          }
-          .kpi-value {
-            font-size: 28px !important;
-          }
-          .page-title {
-            font-size: 28px !important;
-          }
-          .section-title {
-            font-size: 17px !important;
-          }
-          .positions-table td,
-          .positions-table th {
-            padding: 10px 14px !important;
-          }
-        }
-
-        @media (min-width: 769px) and (max-width: 1024px) {
-          .kpi-grid {
-            grid-template-columns: repeat(3, 1fr);
-          }
-          .kpi-value {
-            font-size: 30px !important;
-          }
-          .page-title {
-            font-size: 34px !important;
-          }
-        }
-
-        /* Hover sutil en filas */
-        .position-row {
-          transition: background 0.15s ease;
-        }
-        .position-row:hover {
-          background: rgba(0, 212, 255, 0.03) !important;
-        }
-
-        /* Fade-in suave (Apple-like) */
-        @keyframes fadeUp {
-          from { opacity: 0; transform: translateY(10px); }
-          to   { opacity: 1; transform: translateY(0); }
-        }
-        .fade-up {
-          animation: fadeUp 0.5s ease forwards;
-        }
-        .fade-up:nth-child(1) { animation-delay: 0s; }
-        .fade-up:nth-child(2) { animation-delay: 0.07s; }
-        .fade-up:nth-child(3) { animation-delay: 0.14s; }
-      `}</style>
-
-      <div className="dashboard-root" style={{ fontFamily: "var(--font-sf, -apple-system, sans-serif)" }}>
-
-        {/* ── Cabecera al estilo Apple ── */}
-        <div style={{ marginBottom: 40 }} className="fade-up">
-          <p style={{
-            fontSize: 13,
-            fontWeight: 500,
-            letterSpacing: "0.04em",
-            textTransform: "uppercase",
-            color: "var(--cyan, #00D4FF)",
-            marginBottom: 10,
-          }}>
-            Área privada
-          </p>
-          <h1
-            className="page-title"
-            style={{
-              fontSize: 42,
-              fontWeight: 700,
-              letterSpacing: "-0.03em",
-              lineHeight: 1.1,
-              color: "var(--text, #F0F6FF)",
-              marginBottom: 10,
-            }}
-          >
+      {/* Header saludo */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-2">
+        <div>
+          <p className="text-xs font-medium text-gray-400 uppercase tracking-widest mb-1">Area privada</p>
+          <h1 className="text-2xl sm:text-3xl font-semibold text-gray-900 tracking-tight">
             Hola, {firstName} 👋
           </h1>
-          <p style={{
-            fontSize: 17,
-            fontWeight: 400,
-            color: "var(--text-muted, rgba(240,246,255,0.5))",
-            lineHeight: 1.5,
-            maxWidth: 480,
-          }}>
-            Aquí tienes el estado actual de tu cartera de inversión.
-          </p>
+          <p className="text-sm text-gray-400 mt-1">{now}</p>
         </div>
+        <div className="flex items-center gap-2 bg-green-50 border border-green-100 rounded-xl px-4 py-2.5 self-start sm:self-auto">
+          <span className="w-2 h-2 bg-green-400 rounded-full animate-pulse" />
+          <span className="text-xs font-medium text-green-700">Cartera activa</span>
+        </div>
+      </div>
 
-        {/* ── Sin cartera ── */}
-        {!portfolio || portfolio.total_value === 0 ? (
-          <div
-            className="fade-up"
-            style={{
-              background: "var(--surface, #0A1628)",
-              border: "1px solid var(--border, rgba(0,212,255,0.10))",
-              borderRadius: 20,
-              padding: "60px 40px",
-              textAlign: "center",
-            }}
-          >
-            <div style={{
-              width: 56,
-              height: 56,
-              borderRadius: "50%",
-              background: "rgba(0,212,255,0.08)",
-              border: "1px solid rgba(0,212,255,0.18)",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              margin: "0 auto 20px",
-              fontSize: 24,
-            }}>
-              ◎
-            </div>
-            <h2 style={{
-              fontSize: 22,
-              fontWeight: 600,
-              color: "var(--text, #F0F6FF)",
-              marginBottom: 10,
-              letterSpacing: "-0.01em",
-            }}>
-              Tu cartera está en preparación
-            </h2>
-            <p style={{ fontSize: 15, color: "var(--text-muted, rgba(240,246,255,0.5))", lineHeight: 1.6, maxWidth: 360, margin: "0 auto" }}>
-              Tu asesor configurará tu cartera en breve. Pronto estará disponible aquí.
-            </p>
-          </div>
-        ) : (
-          <>
-            {/* ── KPI Cards ── */}
-            <div className="kpi-grid">
-              {/* Valor total — card destacada */}
-              <div
-                className="fade-up"
-                style={{
-                  background: "linear-gradient(145deg, rgba(0,40,80,0.9) 0%, rgba(0,20,50,0.95) 100%)",
-                  border: "1px solid rgba(0,212,255,0.22)",
-                  borderRadius: 20,
-                  padding: "26px 24px 22px",
-                  position: "relative",
-                  overflow: "hidden",
-                }}
-              >
-                {/* Glow decorativo */}
-                <div style={{
-                  position: "absolute",
-                  top: -20,
-                  right: -20,
-                  width: 100,
-                  height: 100,
-                  borderRadius: "50%",
-                  background: "rgba(0,212,255,0.07)",
-                  pointerEvents: "none",
-                }} />
-                <p style={{
-                  fontSize: 11,
-                  fontWeight: 600,
-                  textTransform: "uppercase",
-                  letterSpacing: "0.10em",
-                  color: "rgba(0,212,255,0.6)",
-                  marginBottom: 14,
-                }}>
-                  Valor total
-                </p>
-                <p
-                  className="kpi-value"
-                  style={{
-                    fontSize: 36,
-                    fontWeight: 700,
-                    letterSpacing: "-0.03em",
-                    color: "#00D4FF",
-                    lineHeight: 1,
-                    marginBottom: 8,
-                  }}
-                >
+      {!portfolio || portfolio.total_value === 0 ? (
+        <div className="bg-white border border-gray-200 rounded-2xl p-12 text-center">
+          <div className="w-14 h-14 bg-gray-100 rounded-2xl flex items-center justify-center mx-auto mb-4 text-2xl">◎</div>
+          <p className="font-medium text-gray-900 mb-2">Tu cartera esta en preparacion</p>
+          <p className="text-sm text-gray-400 max-w-xs mx-auto">Tu asesor configurara tu cartera en breve. Pronto estara disponible aqui.</p>
+        </div>
+      ) : (
+        <>
+          {/* KPI cards */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+
+            {/* Valor total — card grande destacada */}
+            <div className="sm:col-span-1 relative bg-gradient-to-br from-gray-900 to-gray-800 rounded-2xl p-6 overflow-hidden">
+              <div className="absolute top-0 right-0 w-32 h-32 bg-white/5 rounded-full -translate-y-8 translate-x-8" />
+              <div className="absolute bottom-0 left-0 w-20 h-20 bg-white/5 rounded-full translate-y-6 -translate-x-6" />
+              <div className="relative">
+                <p className="text-xs font-medium text-white/50 uppercase tracking-widest mb-3">Valor total</p>
+                <p className="text-3xl sm:text-4xl font-bold text-white tracking-tight mb-1">
                   €{Number(portfolio.total_value).toLocaleString("es-ES")}
                 </p>
-                <p style={{ fontSize: 12, color: "rgba(0,212,255,0.45)", fontWeight: 500 }}>
-                  EUR · Valor de mercado
-                </p>
-              </div>
-
-              {/* Rentabilidad */}
-              <div
-                className="fade-up"
-                style={{
-                  background: "var(--surface, #0A1628)",
-                  border: "1px solid var(--border, rgba(0,212,255,0.10))",
-                  borderRadius: 20,
-                  padding: "26px 24px 22px",
-                }}
-              >
-                <p style={{
-                  fontSize: 11,
-                  fontWeight: 600,
-                  textTransform: "uppercase",
-                  letterSpacing: "0.10em",
-                  color: "var(--text-dim, rgba(240,246,255,0.25))",
-                  marginBottom: 14,
-                }}>
-                  Rentabilidad YTD
-                </p>
-                <p
-                  className="kpi-value"
-                  style={{
-                    fontSize: 36,
-                    fontWeight: 700,
-                    letterSpacing: "-0.03em",
-                    color: portfolio.ytd_return >= 0 ? "#00C98D" : "#FF4D6A",
-                    lineHeight: 1,
-                    marginBottom: 8,
-                  }}
-                >
-                  {portfolio.ytd_return >= 0 ? "+" : ""}{portfolio.ytd_return}%
-                </p>
-                <p style={{
-                  fontSize: 12,
-                  color: portfolio.ytd_return >= 0
-                    ? "rgba(0,201,141,0.5)"
-                    : "rgba(255,77,106,0.5)",
-                  fontWeight: 500,
-                }}>
-                  {portfolio.ytd_return >= 0 ? "Rentabilidad positiva" : "Rentabilidad negativa"}
-                </p>
-              </div>
-
-              {/* Perfil de riesgo */}
-              <div
-                className="fade-up"
-                style={{
-                  background: "var(--surface, #0A1628)",
-                  border: "1px solid var(--border, rgba(0,212,255,0.10))",
-                  borderRadius: 20,
-                  padding: "26px 24px 22px",
-                }}
-              >
-                <p style={{
-                  fontSize: 11,
-                  fontWeight: 600,
-                  textTransform: "uppercase",
-                  letterSpacing: "0.10em",
-                  color: "var(--text-dim, rgba(240,246,255,0.25))",
-                  marginBottom: 14,
-                }}>
-                  Perfil de riesgo
-                </p>
-                <p
-                  className="kpi-value"
-                  style={{
-                    fontSize: 30,
-                    fontWeight: 700,
-                    letterSpacing: "-0.02em",
-                    color: RISK_COLOR[portfolio.risk_profile] ?? "#a855f7",
-                    lineHeight: 1,
-                    marginBottom: 8,
-                    textTransform: "capitalize",
-                  }}
-                >
-                  {RISK_LABEL[portfolio.risk_profile] ?? portfolio.risk_profile}
-                </p>
-                <p style={{ fontSize: 12, color: "var(--text-dim, rgba(240,246,255,0.25))", fontWeight: 500 }}>
-                  Perfil revisado con tu asesor
-                </p>
+                <p className="text-xs text-white/40">EUR · Valor de mercado</p>
               </div>
             </div>
 
-            {/* ── Tabla de posiciones ── */}
+            {/* Rentabilidad */}
+            <div className={`relative rounded-2xl p-6 overflow-hidden ${portfolio.ytd_return >= 0 ? "bg-gradient-to-br from-emerald-500 to-emerald-600" : "bg-gradient-to-br from-red-500 to-red-600"}`}>
+              <div className="absolute top-0 right-0 w-28 h-28 bg-white/10 rounded-full -translate-y-6 translate-x-6" />
+              <div className="relative">
+                <p className="text-xs font-medium text-white/70 uppercase tracking-widest mb-3">Rentabilidad YTD</p>
+                <p className="text-3xl sm:text-4xl font-bold text-white tracking-tight mb-1">
+                  {portfolio.ytd_return >= 0 ? "+" : ""}{portfolio.ytd_return}%
+                </p>
+                <p className="text-xs text-white/60">{portfolio.ytd_return >= 0 ? "Rentabilidad positiva" : "Rentabilidad negativa"}</p>
+              </div>
+            </div>
+
+            {/* Perfil riesgo */}
+            <div className="relative bg-gradient-to-br from-violet-500 to-purple-600 rounded-2xl p-6 overflow-hidden">
+              <div className="absolute top-0 right-0 w-28 h-28 bg-white/10 rounded-full -translate-y-6 translate-x-6" />
+              <div className="relative">
+                <p className="text-xs font-medium text-white/70 uppercase tracking-widest mb-3">Perfil de riesgo</p>
+                <p className="text-3xl sm:text-4xl font-bold text-white tracking-tight capitalize mb-1">
+                  {RISK_LABELS[portfolio.risk_profile] || portfolio.risk_profile}
+                </p>
+                <p className="text-xs text-white/60">Perfil revisado con tu asesor</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Distribucion + posiciones */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+
+            {/* Distribucion */}
             {positions.length > 0 && (
-              <div
-                className="fade-up"
-                style={{
-                  background: "var(--surface, #0A1628)",
-                  border: "1px solid var(--border, rgba(0,212,255,0.10))",
-                  borderRadius: 20,
-                  overflow: "hidden",
-                  marginBottom: 20,
-                }}
-              >
-                <div style={{
-                  padding: "20px 24px 18px",
-                  borderBottom: "1px solid var(--border, rgba(0,212,255,0.08))",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "space-between",
-                  flexWrap: "wrap",
-                  gap: 8,
-                }}>
-                  <h2
-                    className="section-title"
-                    style={{
-                      fontSize: 19,
-                      fontWeight: 600,
-                      color: "var(--text, #F0F6FF)",
-                      letterSpacing: "-0.01em",
-                    }}
-                  >
-                    Posiciones
-                  </h2>
-                  <span style={{
-                    fontSize: 12,
-                    fontWeight: 500,
-                    color: "var(--text-dim, rgba(240,246,255,0.25))",
-                    background: "rgba(255,255,255,0.04)",
-                    padding: "4px 12px",
-                    borderRadius: 20,
-                    border: "1px solid rgba(255,255,255,0.06)",
-                  }}>
-                    {positions.length} {positions.length === 1 ? "activo" : "activos"}
+              <div className="bg-white border border-gray-100 rounded-2xl p-5 shadow-sm">
+                <div className="flex items-center justify-between mb-5">
+                  <h3 className="text-sm font-semibold text-gray-900">Distribucion</h3>
+                  <span className="text-xs text-gray-400 bg-gray-50 border border-gray-100 px-2.5 py-1 rounded-full">
+                    {positions.length} posiciones
                   </span>
                 </div>
-
-                <div className="positions-table-wrap">
-                  <table
-                    className="positions-table"
-                    style={{ width: "100%", borderCollapse: "collapse", minWidth: 500 }}
-                  >
-                    <thead>
-                      <tr>
-                        {["Activo", "Tipo", "Valor", "Peso", "Rentabilidad"].map(h => (
-                          <th
-                            key={h}
-                            style={{
-                              textAlign: "left",
-                              padding: "12px 24px",
-                              fontSize: 11,
-                              textTransform: "uppercase",
-                              letterSpacing: "0.09em",
-                              color: "var(--text-dim, rgba(240,246,255,0.25))",
-                              fontWeight: 600,
-                              borderBottom: "1px solid rgba(0,212,255,0.06)",
-                              whiteSpace: "nowrap",
-                            }}
-                          >
-                            {h}
-                          </th>
-                        ))}
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {positions.map((pos: any, i: number) => (
-                        <tr
-                          key={pos.id}
-                          className="position-row"
-                          style={{
-                            borderBottom: i < positions.length - 1
-                              ? "1px solid rgba(0,212,255,0.04)"
-                              : "none",
-                          }}
-                        >
-                          <td style={{ padding: "16px 24px" }}>
-                            <span style={{
-                              fontSize: 14,
-                              fontWeight: 600,
-                              color: "var(--text, #F0F6FF)",
-                              letterSpacing: "-0.01em",
-                            }}>
-                              {pos.asset_name}
-                            </span>
-                            {pos.isin && (
-                              <p style={{
-                                fontSize: 11,
-                                color: "var(--text-dim, rgba(240,246,255,0.25))",
-                                marginTop: 2,
-                                fontFamily: "monospace",
-                              }}>
-                                {pos.isin}
-                              </p>
-                            )}
-                          </td>
-                          <td style={{ padding: "16px 24px", whiteSpace: "nowrap" }}>
-                            <span style={{
-                              fontSize: 12,
-                              fontWeight: 500,
-                              color: ASSET_COLORS[pos.asset_type] ?? "#F0F6FF",
-                              background: `${ASSET_COLORS[pos.asset_type] ?? "#F0F6FF"}15`,
-                              border: `1px solid ${ASSET_COLORS[pos.asset_type] ?? "#F0F6FF"}22`,
-                              padding: "4px 10px",
-                              borderRadius: 20,
-                            }}>
-                              {ASSET_LABELS[pos.asset_type] ?? pos.asset_type}
-                            </span>
-                          </td>
-                          <td style={{ padding: "16px 24px", whiteSpace: "nowrap" }}>
-                            <span style={{
-                              fontSize: 14,
-                              fontWeight: 500,
-                              color: "var(--text-muted, rgba(240,246,255,0.5))",
-                              letterSpacing: "-0.01em",
-                            }}>
-                              €{Number(pos.value).toLocaleString("es-ES")}
-                            </span>
-                          </td>
-                          <td style={{ padding: "16px 24px", whiteSpace: "nowrap" }}>
-                            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                              {/* Mini barra de peso */}
-                              <div style={{
-                                width: 40,
-                                height: 3,
-                                background: "rgba(255,255,255,0.08)",
-                                borderRadius: 2,
-                                overflow: "hidden",
-                              }}>
-                                <div style={{
-                                  width: `${Math.min(pos.weight_pct, 100)}%`,
-                                  height: "100%",
-                                  background: "#00D4FF",
-                                  borderRadius: 2,
-                                }} />
-                              </div>
-                              <span style={{
-                                fontSize: 13,
-                                color: "var(--text-dim, rgba(240,246,255,0.35))",
-                              }}>
-                                {pos.weight_pct}%
-                              </span>
-                            </div>
-                          </td>
-                          <td style={{ padding: "16px 24px", whiteSpace: "nowrap" }}>
-                            <span style={{
-                              fontSize: 14,
-                              fontWeight: 700,
-                              color: pos.return_pct >= 0 ? "#00C98D" : "#FF4D6A",
-                              letterSpacing: "-0.01em",
-                            }}>
-                              {pos.return_pct >= 0 ? "+" : ""}{pos.return_pct}%
-                            </span>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                <div className="space-y-4">
+                  {positions.map((pos: any) => (
+                    <div key={pos.id}>
+                      <div className="flex items-center justify-between mb-1.5">
+                        <div className="flex items-center gap-2">
+                          <span className="w-2 h-2 rounded-full flex-shrink-0" style={{background: ASSET_COLORS[pos.asset_type] || "#6b7280"}} />
+                          <span className="text-sm font-medium text-gray-700">{pos.asset_name}</span>
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <span className={`text-xs font-medium ${pos.return_pct >= 0 ? "text-emerald-600" : "text-red-500"}`}>
+                            {pos.return_pct >= 0 ? "+" : ""}{pos.return_pct}%
+                          </span>
+                          <span className="text-xs text-gray-400 w-8 text-right">{pos.weight_pct}%</span>
+                        </div>
+                      </div>
+                      <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                        <div
+                          className="h-1.5 rounded-full transition-all duration-1000"
+                          style={{width: `${pos.weight_pct}%`, background: ASSET_COLORS[pos.asset_type] || "#6b7280"}}
+                        />
+                      </div>
+                    </div>
+                  ))}
                 </div>
               </div>
             )}
 
-            {/* ── Nota del asesor ── */}
-            {portfolio.notes && (
-              <div
-                className="fade-up"
-                style={{
-                  background: "rgba(0, 212, 255, 0.03)",
-                  border: "1px solid rgba(0, 212, 255, 0.12)",
-                  borderLeft: "3px solid #00D4FF",
-                  borderRadius: 16,
-                  padding: "20px 24px",
-                }}
-              >
-                <p style={{
-                  fontSize: 11,
-                  fontWeight: 700,
-                  textTransform: "uppercase",
-                  letterSpacing: "0.12em",
-                  color: "#00D4FF",
-                  marginBottom: 10,
-                }}>
-                  Nota de tu asesor
-                </p>
-                <p style={{
-                  fontSize: 15,
-                  color: "var(--text-muted, rgba(240,246,255,0.55))",
-                  lineHeight: 1.65,
-                  maxWidth: 700,
-                }}>
-                  {portfolio.notes}
-                </p>
+            {/* Posiciones tabla */}
+            {positions.length > 0 && (
+              <div className="bg-white border border-gray-100 rounded-2xl overflow-hidden shadow-sm">
+                <div className="px-5 py-4 border-b border-gray-50">
+                  <h3 className="text-sm font-semibold text-gray-900">Posiciones</h3>
+                </div>
+                <div className="divide-y divide-gray-50">
+                  {positions.map((pos: any) => (
+                    <div key={pos.id} className="px-5 py-3.5 flex items-center justify-between hover:bg-gray-50/50 transition-colors">
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm font-medium text-gray-900 truncate">{pos.asset_name}</p>
+                        <div className="flex items-center gap-2 mt-0.5">
+                          <span className="text-[10px] font-medium px-1.5 py-0.5 rounded-full" style={{background: `${ASSET_COLORS[pos.asset_type]}15`, color: ASSET_COLORS[pos.asset_type] || "#6b7280"}}>
+                            {ASSET_LABELS[pos.asset_type] || pos.asset_type}
+                          </span>
+                          {pos.isin && <span className="text-[10px] text-gray-300 font-mono">{pos.isin}</span>}
+                        </div>
+                      </div>
+                      <div className="text-right flex-shrink-0 ml-4">
+                        <p className="text-sm font-semibold text-gray-900">€{Number(pos.value).toLocaleString("es-ES")}</p>
+                        <p className={`text-xs font-medium ${pos.return_pct >= 0 ? "text-emerald-500" : "text-red-500"}`}>
+                          {pos.return_pct >= 0 ? "+" : ""}{pos.return_pct}%
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
               </div>
             )}
-          </>
-        )}
-      </div>
-    </>
+          </div>
+
+          {/* Nota del asesor */}
+          {portfolio.notes && (
+            <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-100 rounded-2xl p-5">
+              <div className="flex items-center gap-2 mb-3">
+                <div className="w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center text-xs">◎</div>
+                <p className="text-xs font-semibold text-blue-800 uppercase tracking-widest">Nota de tu asesor</p>
+              </div>
+              <p className="text-sm text-blue-900/70 leading-relaxed">{portfolio.notes}</p>
+            </div>
+          )}
+
+          {/* Ultima actualizacion */}
+          <div className="flex items-center justify-end gap-2 text-xs text-gray-300">
+            <span>Ultima actualizacion:</span>
+            <span className="font-medium text-gray-400">
+              {new Date(portfolio.last_updated).toLocaleDateString("es-ES", { day: "numeric", month: "long", year: "numeric" })}
+            </span>
+          </div>
+        </>
+      )}
+    </div>
   )
 }
