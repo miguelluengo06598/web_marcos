@@ -2,19 +2,21 @@
 
 import Link from "next/link"
 import { usePathname, useRouter } from "next/navigation"
+import { useState } from "react"
 import { createClient } from "@/lib/supabase/client"
 
 const nav = [
-  { href: "/admin", label: "Resumen", exact: true },
-  { href: "/admin/clientes", label: "Clientes" },
-  { href: "/admin/posts", label: "Posts" },
-  { href: "/admin/productos", label: "Productos" },
+  { href: "/admin", label: "Resumen", icon: "▦" },
+  { href: "/admin/clientes", label: "Clientes", icon: "◎" },
+  { href: "/admin/posts", label: "Noticias", icon: "◈" },
+  { href: "/admin/productos", label: "Productos", icon: "◇" },
 ]
 
 export default function AdminSidebar() {
   const pathname = usePathname()
   const router = useRouter()
   const supabase = createClient()
+  const [mobileOpen, setMobileOpen] = useState(false)
 
   async function handleLogout() {
     await supabase.auth.signOut()
@@ -22,114 +24,57 @@ export default function AdminSidebar() {
     router.refresh()
   }
 
+  const NavLinks = () => (
+    <>
+      {nav.map(item => {
+        const active = item.href === "/admin" ? pathname === "/admin" : pathname.startsWith(item.href)
+        return (
+          <Link key={item.href} href={item.href} onClick={() => setMobileOpen(false)}
+            className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors ${active ? "bg-gray-900 text-white" : "text-gray-500 hover:bg-gray-100 hover:text-gray-900"}`}>
+            <span>{item.icon}</span>{item.label}
+          </Link>
+        )
+      })}
+    </>
+  )
+
   return (
-    <aside style={{
-      width: 220,
-      minHeight: "100vh",
-      background: "var(--surface)",
-      borderRight: "1px solid var(--border)",
-      display: "flex",
-      flexDirection: "column",
-      position: "sticky",
-      top: 0,
-      height: "100vh",
-      overflowY: "auto",
-    }}>
-      {/* Logo */}
-      <div style={{
-        padding: "20px 20px 16px",
-        borderBottom: "1px solid var(--border)",
-      }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
-          <div style={{
-            width: 8,
-            height: 8,
-            borderRadius: "50%",
-            background: "#00D4FF",
-            boxShadow: "0 0 10px rgba(0, 212, 255, 0.6)",
-            flexShrink: 0,
-          }} />
-          <span style={{
-            fontSize: 13,
-            fontWeight: 700,
-            color: "var(--text)",
-            fontFamily: "var(--font-display)",
-          }}>
-            WM Admin
-          </span>
+    <>
+      {/* Desktop sidebar */}
+      <aside className="hidden lg:flex fixed left-0 top-0 h-full w-56 bg-white border-r border-gray-200 flex-col z-40">
+        <div className="p-5 border-b border-gray-100">
+          <p className="font-semibold text-gray-900 text-sm">Gestion Patrimonial</p>
+          <span className="text-xs text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full mt-1 inline-block">Panel admin</span>
         </div>
-        <span style={{
-          display: "inline-flex",
-          alignItems: "center",
-          padding: "2px 8px",
-          background: "rgba(0,212,255,0.08)",
-          border: "1px solid rgba(0,212,255,0.18)",
-          borderRadius: 4,
-          fontSize: 10,
-          fontWeight: 600,
-          color: "#00D4FF",
-          fontFamily: "var(--font-display)",
-          letterSpacing: "0.06em",
-          textTransform: "uppercase",
-        }}>
-          Panel admin
-        </span>
-      </div>
+        <nav className="flex-1 p-3 space-y-1"><NavLinks /></nav>
+        <div className="p-3 border-t border-gray-100">
+          <button onClick={handleLogout} className="w-full text-left px-3 py-2.5 rounded-lg text-sm text-gray-400 hover:bg-gray-100 transition-colors">
+            Cerrar sesion
+          </button>
+        </div>
+      </aside>
 
-      {/* Nav */}
-      <nav style={{ flex: 1, padding: "12px 10px" }}>
-        {nav.map(item => {
-          const active = item.exact
-            ? pathname === item.href
-            : pathname.startsWith(item.href)
-          return (
-            <Link
-              key={item.href}
-              href={item.href}
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: 10,
-                padding: "8px 12px",
-                borderRadius: 8,
-                marginBottom: 2,
-                fontSize: 13,
-                fontWeight: active ? 600 : 400,
-                fontFamily: "var(--font-display)",
-                color: active ? "#00D4FF" : "var(--text-muted)",
-                background: active ? "rgba(0, 212, 255, 0.07)" : "transparent",
-                borderLeft: active ? "2px solid #00D4FF" : "2px solid transparent",
-                transition: "all 0.12s",
-                textDecoration: "none",
-              }}
-            >
-              {item.label}
-            </Link>
-          )
-        })}
-      </nav>
-
-      {/* Footer */}
-      <div style={{
-        padding: "16px 20px",
-        borderTop: "1px solid var(--border)",
-      }}>
-        <button
-          onClick={handleLogout}
-          style={{
-            fontSize: 12,
-            color: "var(--text-dim)",
-            background: "none",
-            border: "none",
-            cursor: "pointer",
-            fontFamily: "var(--font-body)",
-            padding: 0,
-          }}
-        >
-          Cerrar sesiÃ³n â†’
+      {/* Mobile topbar */}
+      <div className="lg:hidden fixed top-0 left-0 right-0 z-50 bg-white border-b border-gray-200 flex items-center justify-between px-4 h-14">
+        <p className="font-semibold text-gray-900 text-sm">Gestion Patrimonial</p>
+        <button onClick={() => setMobileOpen(!mobileOpen)} className="p-2">
+          <div className="w-5 h-0.5 bg-gray-600 mb-1" />
+          <div className="w-5 h-0.5 bg-gray-600 mb-1" />
+          <div className="w-5 h-0.5 bg-gray-600" />
         </button>
       </div>
-    </aside>
+
+      {/* Mobile menu */}
+      {mobileOpen && (
+        <div className="lg:hidden fixed inset-0 z-40 bg-black/20" onClick={() => setMobileOpen(false)}>
+          <div className="absolute left-0 top-14 bottom-0 w-64 bg-white border-r border-gray-200 flex flex-col" onClick={e => e.stopPropagation()}>
+            <nav className="flex-1 p-3 space-y-1"><NavLinks /></nav>
+            <div className="p-3 border-t border-gray-100">
+              <button onClick={handleLogout} className="w-full text-left px-3 py-2.5 rounded-lg text-sm text-gray-400">Cerrar sesion</button>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
   )
 }
-

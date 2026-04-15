@@ -31,53 +31,44 @@ export default function ContactForm() {
 
   if (sent) {
     return (
-      <div className="border border-black/10 p-10 text-center bg-white/50">
-        <p className="text-xs uppercase tracking-widest text-black/30 mb-4">Recibido</p>
-        <p className="text-2xl font-light mb-2" style={{fontFamily: "Georgia, serif"}}>Mensaje enviado.</p>
-        <p className="text-sm text-black/40">Me pondre en contacto contigo en menos de 24 horas.</p>
+      <div className="bg-white border border-gray-200 rounded-2xl p-10 text-center">
+        <div className="w-12 h-12 bg-green-50 border border-green-200 rounded-full flex items-center justify-center mx-auto mb-4 text-green-500 text-xl">✓</div>
+        <p className="font-medium text-gray-900 mb-1">Mensaje recibido</p>
+        <p className="text-sm text-gray-400">Me pondre en contacto contigo en menos de 24 horas.</p>
       </div>
     )
   }
 
   return (
-    <div className="space-y-0">
-      {[
-        { field: "nombre", label: "Nombre", type: "text", placeholder: "Tu nombre completo" },
-        { field: "email", label: "Email", type: "email", placeholder: "tu@email.com" },
-        { field: "telefono", label: "Telefono", type: "tel", placeholder: "+34 600 000 000" },
-      ].map((f) => (
-        <div key={f.field} className="border-t border-black/10 py-4">
-          <label className="block text-xs uppercase tracking-widest text-black/30 mb-2">{f.label}</label>
-          <input
-            type={f.type}
-            value={(form as any)[f.field]}
-            onChange={e => update(f.field, e.target.value)}
-            placeholder={f.placeholder}
-            className="w-full bg-transparent text-sm text-black placeholder:text-black/20 focus:outline-none py-1"
-          />
+    <div className="bg-white border border-gray-200 rounded-2xl p-6 space-y-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div>
+          <label className="block text-xs font-medium text-gray-600 mb-1.5">Nombre *</label>
+          <input type="text" value={form.nombre} onChange={e => update("nombre", e.target.value)}
+            placeholder="Tu nombre" className="w-full px-3.5 py-2.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900 text-gray-900 placeholder:text-gray-300" />
         </div>
-      ))}
-      <div className="border-t border-black/10 py-4">
-        <label className="block text-xs uppercase tracking-widest text-black/30 mb-2">Mensaje</label>
-        <textarea
-          value={form.mensaje}
-          onChange={e => update("mensaje", e.target.value)}
-          placeholder="Cuentame tu situacion..."
-          rows={4}
-          className="w-full bg-transparent text-sm text-black placeholder:text-black/20 focus:outline-none resize-none py-1"
-        />
+        <div>
+          <label className="block text-xs font-medium text-gray-600 mb-1.5">Telefono</label>
+          <input type="tel" value={form.telefono} onChange={e => update("telefono", e.target.value)}
+            placeholder="+34 600 000 000" className="w-full px-3.5 py-2.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900 text-gray-900 placeholder:text-gray-300" />
+        </div>
       </div>
-      <div className="border-t border-black/10 pt-6">
-        {error && <p className="text-xs text-red-500 mb-4">{error}</p>}
-        <button
-          onClick={handleSubmit}
-          disabled={loading}
-          className="text-xs uppercase tracking-widest border border-black px-8 py-4 hover:bg-black hover:text-white transition-all duration-300 disabled:opacity-30 w-full"
-        >
-          {loading ? "Enviando..." : "Enviar mensaje →"}
-        </button>
-        <p className="text-xs text-black/20 mt-3 text-center">Tus datos no seran compartidos con terceros.</p>
+      <div>
+        <label className="block text-xs font-medium text-gray-600 mb-1.5">Email *</label>
+        <input type="email" value={form.email} onChange={e => update("email", e.target.value)}
+          placeholder="tu@email.com" className="w-full px-3.5 py-2.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900 text-gray-900 placeholder:text-gray-300" />
       </div>
+      <div>
+        <label className="block text-xs font-medium text-gray-600 mb-1.5">Mensaje *</label>
+        <textarea value={form.mensaje} onChange={e => update("mensaje", e.target.value)}
+          rows={4} placeholder="Cuentame tu situacion..." className="w-full px-3.5 py-2.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900 resize-none text-gray-900 placeholder:text-gray-300" />
+      </div>
+      {error && <p className="text-sm text-red-500 bg-red-50 px-3 py-2 rounded-lg">{error}</p>}
+      <button onClick={handleSubmit} disabled={loading}
+        className="w-full bg-gray-900 text-white py-3 rounded-xl text-sm font-medium hover:bg-gray-800 disabled:opacity-40 transition-colors">
+        {loading ? "Enviando..." : "Enviar mensaje"}
+      </button>
+      <p className="text-xs text-gray-300 text-center">Tus datos no seran compartidos con terceros.</p>
     </div>
   )
 }

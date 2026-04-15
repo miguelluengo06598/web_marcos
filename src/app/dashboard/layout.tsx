@@ -11,12 +11,11 @@ export default async function DashboardLayout({ children }: { children: React.Re
   if (profile?.role === "admin") redirect("/admin")
 
   return (
-    <div style={{ minHeight: "100vh", background: "var(--bg)", color: "var(--text)", fontFamily: "var(--font-body)" }}>
+    <div className="min-h-screen bg-gray-50">
       <DashboardNav fullName={profile?.full_name || ""} />
-      <main style={{ maxWidth: 1100, margin: "0 auto", padding: "32px 24px" }}>
+      <main className="max-w-5xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
         {children}
       </main>
     </div>
   )
 }
-

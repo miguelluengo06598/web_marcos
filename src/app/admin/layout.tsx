@@ -11,21 +11,11 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   if (profile?.role !== "admin") redirect("/dashboard")
 
   return (
-    <div style={{
-      minHeight: "100vh",
-      background: "var(--bg)",
-      color: "var(--text)",
-      fontFamily: "var(--font-body)",
-    }}>
+    <div className="min-h-screen bg-gray-50">
       <AdminSidebar />
-      <main style={{
-        marginLeft: 220,
-        padding: "36px 44px",
-        minHeight: "100vh",
-      }}>
+      <main className="lg:ml-56 pt-14 lg:pt-0 p-4 sm:p-6 lg:p-8">
         {children}
       </main>
     </div>
   )
 }
-
