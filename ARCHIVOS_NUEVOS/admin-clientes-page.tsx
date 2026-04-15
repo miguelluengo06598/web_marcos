@@ -1,4 +1,4 @@
-﻿import { createClient } from '@/lib/supabase/server'
+import { createClient } from '@/lib/supabase/server'
 import Link from 'next/link'
 
 export default async function ClientesPage() {
@@ -47,7 +47,7 @@ export default async function ClientesPage() {
       }}>
         {!clientes || clientes.length === 0 ? (
           <div style={{ padding: "48px", textAlign: "center", fontSize: 13, color: "var(--text-dim)" }}>
-            No hay clientes todavÃ­a. Crea el primero.
+            No hay clientes todavía. Crea el primero.
           </div>
         ) : (
           <table style={{ width: "100%", borderCollapse: "collapse" }}>
@@ -104,7 +104,7 @@ export default async function ClientesPage() {
                       {c.email}
                     </td>
                     <td style={{ padding: "14px 20px", fontSize: 13, fontFamily: "var(--font-display)", fontWeight: 500 }}>
-                      {portfolio ? `â‚¬${Number(portfolio.total_value).toLocaleString('es-ES')}` : 'â€”'}
+                      {portfolio ? `€${Number(portfolio.total_value).toLocaleString('es-ES')}` : '—'}
                     </td>
                     <td style={{ padding: "14px 20px" }}>
                       {portfolio ? (
@@ -116,7 +116,7 @@ export default async function ClientesPage() {
                         }}>
                           {portfolio.ytd_return >= 0 ? '+' : ''}{portfolio.ytd_return}%
                         </span>
-                      ) : 'â€”'}
+                      ) : '—'}
                     </td>
                     <td style={{ padding: "14px 20px" }}>
                       <Link href={`/admin/clientes/${c.id}`} style={{
@@ -129,7 +129,7 @@ export default async function ClientesPage() {
                       onMouseEnter={e => (e.currentTarget.style.color = "var(--cyan)")}
                       onMouseLeave={e => (e.currentTarget.style.color = "var(--text-dim)")}
                       >
-                        Gestionar â†’
+                        Gestionar →
                       </Link>
                     </td>
                   </tr>
@@ -142,4 +142,3 @@ export default async function ClientesPage() {
     </div>
   )
 }
-

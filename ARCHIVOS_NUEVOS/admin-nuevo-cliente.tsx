@@ -1,4 +1,4 @@
-﻿'use client'
+'use client'
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
@@ -20,7 +20,7 @@ export default function NuevoClientePage() {
 
   async function handleSubmit() {
     if (!form.full_name || !form.email || !form.password) {
-      setError('Nombre, email y contraseÃ±a son obligatorios')
+      setError('Nombre, email y contraseña son obligatorios')
       return
     }
 
@@ -78,7 +78,7 @@ export default function NuevoClientePage() {
           onMouseEnter={e => (e.currentTarget.style.color = "var(--text)")}
           onMouseLeave={e => (e.currentTarget.style.color = "var(--text-dim)")}
         >
-          â† Volver
+          ← Volver
         </button>
         <h2 style={{ fontFamily: "var(--font-display)", fontSize: 20, fontWeight: 700, letterSpacing: "-0.02em" }}>
           Nuevo cliente
@@ -96,7 +96,7 @@ export default function NuevoClientePage() {
       }}>
         <div>
           <label style={labelStyle}>Nombre completo <span style={{ color: "var(--red)" }}>*</span></label>
-          <input type="text" value={form.full_name} onChange={e => update('full_name', e.target.value)} placeholder="Juan LÃ³pez GarcÃ­a" style={fieldStyle} />
+          <input type="text" value={form.full_name} onChange={e => update('full_name', e.target.value)} placeholder="Juan López García" style={fieldStyle} />
         </div>
 
         <div>
@@ -105,15 +105,15 @@ export default function NuevoClientePage() {
         </div>
 
         <div>
-          <label style={labelStyle}>ContraseÃ±a inicial <span style={{ color: "var(--red)" }}>*</span></label>
-          <input type="text" value={form.password} onChange={e => update('password', e.target.value)} placeholder="MÃ­nimo 8 caracteres" style={fieldStyle} />
+          <label style={labelStyle}>Contraseña inicial <span style={{ color: "var(--red)" }}>*</span></label>
+          <input type="text" value={form.password} onChange={e => update('password', e.target.value)} placeholder="Mínimo 8 caracteres" style={fieldStyle} />
           <p style={{ fontSize: 11, color: "var(--text-dim)", marginTop: 5 }}>
-            El cliente podrÃ¡ cambiarla despuÃ©s desde su perfil
+            El cliente podrá cambiarla después desde su perfil
           </p>
         </div>
 
         <div>
-          <label style={labelStyle}>TelÃ©fono (opcional)</label>
+          <label style={labelStyle}>Teléfono (opcional)</label>
           <input type="tel" value={form.phone} onChange={e => update('phone', e.target.value)} placeholder="+34 600 000 000" style={fieldStyle} />
         </div>
 
@@ -155,4 +155,3 @@ export default function NuevoClientePage() {
     </div>
   )
 }
-

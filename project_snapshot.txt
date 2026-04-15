@@ -1,0 +1,3255 @@
+﻿=== ESTRUCTURA ===
+src\middleware.ts
+src\app\ContactForm.tsx
+src\app\ContactFormWope.tsx
+src\app\favicon.ico
+src\app\globals.css
+src\app\layout.tsx
+src\app\page.tsx
+src\app\admin\layout.tsx
+src\app\admin\page.tsx
+src\app\admin\clientes\page.tsx
+src\app\admin\clientes\nuevo\page.tsx
+src\app\admin\clientes\[id]\page.tsx
+src\app\admin\posts\page.tsx
+src\app\admin\posts\nuevo\page.tsx
+src\app\admin\productos\page.tsx
+src\app\admin\productos\nuevo\page.tsx
+src\app\api\admin\cartera\route.ts
+src\app\api\admin\clientes\route.ts
+src\app\api\contacto\route.ts
+src\app\api\productos\interes\route.ts
+src\app\dashboard\layout.tsx
+src\app\dashboard\page.tsx
+src\app\dashboard\documentos\page.tsx
+src\app\dashboard\noticias\page.tsx
+src\app\dashboard\productos\page.tsx
+src\app\login\LoginClient.tsx
+src\app\login\page.tsx
+src\components\CustomCursor.tsx
+src\components\SmoothScroll.tsx
+src\components\admin\AdminSidebar.tsx
+src\components\admin\ClienteCarteraForm.tsx
+src\components\admin\ClienteProductosList.tsx
+src\components\dashboard\DashboardNav.tsx
+src\components\dashboard\ProductoInteresButton.tsx
+src\lib\telegram.ts
+src\lib\types.ts
+src\lib\supabase\client.ts
+src\lib\supabase\server.ts
+
+=== PACKAGE.JSON ===
+{
+  "name": "asesoria-financiera",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint"
+  },
+  "dependencies": {
+    "@supabase/ssr": "^0.10.2",
+    "@supabase/supabase-js": "^2.103.0",
+    "framer-motion": "^12.38.0",
+    "lenis": "^1.3.21",
+    "next": "16.2.3",
+    "react": "19.2.4",
+    "react-dom": "19.2.4"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4",
+    "@types/node": "^20",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "eslint": "^9",
+    "eslint-config-next": "16.2.3",
+    "tailwindcss": "^4",
+    "typescript": "^5"
+  }
+}
+
+
+=== TAILWIND CONFIG ===
+
+=== GLOBALS.CSS ===
+@import "tailwindcss";
+
+:root {
+  --bg: #0D0D0D;
+  --surface: #141414;
+  --surface2: #1a1a1a;
+  --border: rgba(255,255,255,0.06);
+  --border-hover: rgba(255,255,255,0.12);
+  --text: #ffffff;
+  --text-muted: rgba(255,255,255,0.45);
+  --text-dim: rgba(255,255,255,0.2);
+  --green: #22c55e;
+  --blue: #3b82f6;
+  --purple: #a855f7;
+  --orange: #f97316;
+  --red: #ef4444;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  -webkit-font-smoothing: antialiased;
+  cursor: none;
+}
+
+a { color: inherit; text-decoration: none; }
+
+::-webkit-scrollbar { width: 4px; }
+::-webkit-scrollbar-track { background: var(--bg); }
+::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 2px; }
+
+
+=== NEXT.CONFIG ===
+import type { NextConfig } from 'next'
+
+const nextConfig: NextConfig = { typescript: { ignoreBuildErrors: true } }
+
+export default nextConfig
+
+
+=== MIDDLEWARE ===
+import { createServerClient } from "@supabase/ssr"
+import { NextResponse, type NextRequest } from "next/server"
+
+export async function middleware(request: NextRequest) {
+  let supabaseResponse = NextResponse.next({ request })
+
+  const supabase = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        getAll() { return request.cookies.getAll() },
+        setAll(cookiesToSet) {
+          cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value))
+          supabaseResponse = NextResponse.next({ request })
+          cookiesToSet.forEach(({ name, value, options }) =>
+            supabaseResponse.cookies.set(name, value, options)
+          )
+        },
+      },
+    }
+  )
+
+  const { data: { user } } = await supabase.auth.getUser()
+  const { pathname } = request.nextUrl
+
+  if (pathname.startsWith("/dashboard") && !user) {
+    return NextResponse.redirect(new URL("/login", request.url))
+  }
+
+  if (pathname.startsWith("/admin")) {
+    if (!user) return NextResponse.redirect(new URL("/login", request.url))
+    const { data: profile } = await supabase.from("profiles").select("role").eq("id", user.id).single()
+    if (profile?.role !== "admin") return NextResponse.redirect(new URL("/dashboard", request.url))
+  }
+
+  if (pathname === "/login" && user) {
+    const { data: profile } = await supabase.from("profiles").select("role").eq("id", user.id).single()
+    return NextResponse.redirect(new URL(profile?.role === "admin" ? "/admin" : "/dashboard", request.url))
+  }
+
+  return supabaseResponse
+}
+
+export const config = {
+  matcher: ["/dashboard/:path*", "/admin/:path*", "/login"],
+}
+
+
+=== ARCHIVOS SRC ===
+
+--- src\app\admin\clientes\nuevo\page.tsx ---
+'use client'
+
+import { useState } from 'react'
+import { useRouter } from 'next/navigation'
+import { createClient } from '@/lib/supabase/client'
+
+export default function NuevoClientePage() {
+  const router = useRouter()
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState('')
+  const [form, setForm] = useState({
+    full_name: '',
+    email: '',
+    password: '',
+    phone: '',
+  })
+
+  function update(field: string, value: string) {
+    setForm(prev => ({ ...prev, [field]: value }))
+  }
+
+  async function handleSubmit() {
+    if (!form.full_name || !form.email || !form.password) {
+      setError('Nombre, email y contraseÃ±a son obligatorios')
+      return
+    }
+
+    setLoading(true)
+    setError('')
+
+    // Crear usuario en Supabase Auth vÃ­a API route
+    const res = await fetch('/api/admin/clientes', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(form),
+    })
+
+    const data = await res.json()
+
+    if (!res.ok) {
+      setError(data.error || 'Error al crear el cliente')
+      setLoading(false)
+      return
+    }
+
+    router.push('/admin/clientes')
+    router.refresh()
+  }
+
+  return (
+    <div className="max-w-lg">
+      <div className="flex items-center gap-4 mb-6">
+        <button
+          onClick={() => router.back()}
+          className="text-sm text-gray-500 hover:text-gray-900"
+        >
+          â† Volver
+        </button>
+        <h2 className="text-xl font-medium text-gray-900">Nuevo cliente</h2>
+      </div>
+
+      <div className="bg-white rounded-xl border border-gray-200 p-6 space-y-4">
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1.5">
+            Nombre completo <span className="text-red-500">*</span>
+          </label>
+          <input
+            type="text"
+            value={form.full_name}
+            onChange={e => update('full_name', e.target.value)}
+            placeholder="Juan LÃ³pez GarcÃ­a"
+            className="w-full px-3.5 py-2.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900"
+          />
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1.5">
+            Email <span className="text-red-500">*</span>
+          </label>
+          <input
+            type="email"
+            value={form.email}
+            onChange={e => update('email', e.target.value)}
+            placeholder="juan@email.com"
+            className="w-full px-3.5 py-2.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900"
+          />
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1.5">
+            ContraseÃ±a inicial <span className="text-red-500">*</span>
+          </label>
+          <input
+            type="text"
+            value={form.password}
+            onChange={e => update('password', e.target.value)}
+            placeholder="MÃ­nimo 8 caracteres"
+            className="w-full px-3.5 py-2.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900"
+          />
+          <p className="text-xs text-gray-400 mt-1">
+            El cliente podrÃ¡ cambiarla despuÃ©s desde su perfil
+          </p>
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1.5">
+            TelÃ©fono (opcional)
+          </label>
+          <input
+            type="tel"
+            value={form.phone}
+            onChange={e => update('phone', e.target.value)}
+            placeholder="+34 600 000 000"
+            className="w-full px-3.5 py-2.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900"
+          />
+        </div>
+
+        {error && (
+          <p className="text-sm text-red-600 bg-red-50 px-3 py-2 rounded-lg">
+            {error}
+          </p>
+        )}
+
+        <button
+          onClick={handleSubmit}
+          disabled={loading}
+          className="w-full bg-gray-900 text-white py-2.5 rounded-lg text-sm font-medium hover:bg-gray-800 disabled:opacity-40 transition-colors"
+        >
+          {loading ? 'Creando cliente...' : 'Crear cliente'}
+        </button>
+      </div>
+    </div>
+  )
+}
+
+--- src\app\admin\clientes\[id]\page.tsx ---
+
+--- src\app\admin\clientes\page.tsx ---
+import { createClient } from '@/lib/supabase/server'
+import Link from 'next/link'
+
+export default async function ClientesPage() {
+  const supabase = await createClient()
+
+  const { data: clientes } = await supabase
+    .from('profiles')
+    .select('*, portfolios(total_value, ytd_return)')
+    .eq('role', 'client')
+    .order('created_at', { ascending: false })
+
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-6">
+        <h2 className="text-xl font-medium text-gray-900">Clientes</h2>
+        <Link
+          href="/admin/clientes/nuevo"
+          className="bg-gray-900 text-white px-4 py-2 rounded-lg text-sm hover:bg-gray-800 transition-colors"
+        >
+          + Nuevo cliente
+        </Link>
+      </div>
+
+      <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+        {!clientes || clientes.length === 0 ? (
+          <div className="p-8 text-center text-sm text-gray-400">
+            No hay clientes todavÃ­a. Crea el primero.
+          </div>
+        ) : (
+          <table className="w-full">
+            <thead>
+              <tr className="border-b border-gray-100">
+                <th className="text-left px-6 py-3 text-xs font-medium text-gray-500">Cliente</th>
+                <th className="text-left px-6 py-3 text-xs font-medium text-gray-500">Email</th>
+                <th className="text-left px-6 py-3 text-xs font-medium text-gray-500">Valor cartera</th>
+                <th className="text-left px-6 py-3 text-xs font-medium text-gray-500">Rentab. YTD</th>
+                <th className="text-left px-6 py-3 text-xs font-medium text-gray-500"></th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-100">
+              {clientes.map((c: any) => {
+                const portfolio = c.portfolios?.[0]
+                const initials = c.full_name
+                  .split(' ')
+                  .map((n: string) => n[0])
+                  .join('')
+                  .slice(0, 2)
+                  .toUpperCase()
+                return (
+                  <tr key={c.id} className="hover:bg-gray-50 transition-colors">
+                    <td className="px-6 py-4">
+                      <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-xs font-medium text-blue-700">
+                          {initials}
+                        </div>
+                        <span className="text-sm font-medium text-gray-900">{c.full_name}</span>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 text-sm text-gray-500">{c.email}</td>
+                    <td className="px-6 py-4 text-sm text-gray-900">
+                      {portfolio ? `â‚¬${Number(portfolio.total_value).toLocaleString('es-ES')}` : 'â€”'}
+                    </td>
+                    <td className="px-6 py-4">
+                      {portfolio ? (
+                        <span className={`text-sm font-medium ${portfolio.ytd_return >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                          {portfolio.ytd_return >= 0 ? '+' : ''}{portfolio.ytd_return}%
+                        </span>
+                      ) : 'â€”'}
+                    </td>
+                    <td className="px-6 py-4">
+                      <Link
+                        href={`/admin/clientes/${c.id}`}
+                        className="text-xs text-gray-500 hover:text-gray-900"
+                      >
+                        Gestionar â†’
+                      </Link>
+                    </td>
+                  </tr>
+                )
+              })}
+            </tbody>
+          </table>
+        )}
+      </div>
+    </div>
+  )
+}
+
+--- src\app\admin\posts\nuevo\page.tsx ---
+'use client'
+
+import { useState } from 'react'
+import { useRouter } from 'next/navigation'
+import { createClient } from '@/lib/supabase/client'
+import type { PostCategory } from '@/lib/types'
+
+const CATEGORIES: { value: PostCategory; label: string }[] = [
+  { value: 'mercados', label: 'Mercados' },
+  { value: 'opinion', label: 'OpiniÃ³n' },
+  { value: 'informe', label: 'Informe' },
+  { value: 'aviso', label: 'Aviso' },
+  { value: 'educacion', label: 'EducaciÃ³n' },
+]
+
+export default function NuevoPostPage() {
+  const router = useRouter()
+  const supabase = createClient()
+  const [loading, setLoading] = useState(false)
+  const [form, setForm] = useState({
+    title: '',
+    content: '',
+    category: 'mercados' as PostCategory,
+    published: false,
+  })
+  const [coverFile, setCoverFile] = useState<File | null>(null)
+  const [pdfFile, setPdfFile] = useState<File | null>(null)
+  const [error, setError] = useState('')
+
+  function update(field: string, value: any) {
+    setForm(prev => ({ ...prev, [field]: value }))
+  }
+
+  async function handleSubmit(publish: boolean) {
+    if (!form.title || !form.content) {
+      setError('El tÃ­tulo y el contenido son obligatorios')
+      return
+    }
+    setLoading(true)
+    setError('')
+
+    let cover_url = ''
+    let pdf_url = ''
+
+    if (coverFile) {
+      const ext = coverFile.name.split('.').pop()
+      const path = `${Date.now()}.${ext}`
+      const { data } = await supabase.storage.from('post-covers').upload(path, coverFile)
+      if (data) {
+        const { data: url } = supabase.storage.from('post-covers').getPublicUrl(path)
+        cover_url = url.publicUrl
+      }
+    }
+
+    if (pdfFile) {
+      const path = `${Date.now()}-${pdfFile.name}`
+      const { data } = await supabase.storage.from('post-pdfs').upload(path, pdfFile)
+      if (data) {
+        const { data: url } = supabase.storage.from('post-pdfs').getPublicUrl(path)
+        pdf_url = url.publicUrl
+      }
+    }
+
+    const { error: err } = await supabase.from('posts').insert({
+      ...form,
+      published: publish,
+      published_at: publish ? new Date().toISOString() : null,
+      cover_url: cover_url || null,
+      pdf_url: pdf_url || null,
+    })
+
+    if (err) {
+      setError(err.message)
+      setLoading(false)
+      return
+    }
+
+    router.push('/admin/posts')
+    router.refresh()
+  }
+
+  return (
+    <div className="max-w-2xl">
+      <div className="flex items-center gap-4 mb-6">
+        <button onClick={() => router.back()} className="text-sm text-gray-500 hover:text-gray-900">
+          â† Volver
+        </button>
+        <h2 className="text-xl font-medium text-gray-900">Nueva publicaciÃ³n</h2>
+      </div>
+
+      <div className="bg-white rounded-xl border border-gray-200 p-6 space-y-5">
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1.5">TÃ­tulo *</label>
+          <input
+            type="text"
+            value={form.title}
+            onChange={e => update('title', e.target.value)}
+            placeholder="Ej: Cierre de mercados â€” abril 2026"
+            className="w-full px-3.5 py-2.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900"
+          />
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1.5">CategorÃ­a</label>
+          <div className="flex gap-2 flex-wrap">
+            {CATEGORIES.map(cat => (
+              <button
+                key={cat.value}
+                onClick={() => update('category', cat.value)}
+                className={`px-3 py-1.5 rounded-full text-xs transition-colors ${
+                  form.category === cat.value
+                    ? 'bg-gray-900 text-white'
+                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                }`}
+              >
+                {cat.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1.5">Contenido *</label>
+          <textarea
+            value={form.content}
+            onChange={e => update('content', e.target.value)}
+            rows={8}
+            placeholder="Escribe el contenido de la publicaciÃ³n..."
+            className="w-full px-3.5 py-2.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900 resize-none"
+          />
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1.5">Imagen de portada</label>
+          <input
+            type="file"
+            accept="image/*"
+            onChange={e => setCoverFile(e.target.files?.[0] || null)}
+            className="w-full text-sm text-gray-500 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border file:border-gray-200 file:text-xs file:bg-white hover:file:bg-gray-50"
+          />
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1.5">PDF adjunto</label>
+          <input
+            type="file"
+            accept=".pdf"
+            onChange={e => setPdfFile(e.target.files?.[0] || null)}
+            className="w-full text-sm text-gray-500 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border file:border-gray-200 file:text-xs file:bg-white hover:file:bg-gray-50"
+          />
+        </div>
+
+        {error && (
+          <p className="text-sm text-red-600 bg-red-50 px-3 py-2 rounded-lg">{error}</p>
+        )}
+
+        <div className="flex gap-3 pt-2">
+          <button
+            onClick={() => handleSubmit(false)}
+            disabled={loading}
+            className="flex-1 border border-gray-200 text-gray-700 py-2.5 rounded-lg text-sm hover:bg-gray-50 disabled:opacity-40 transition-colors"
+          >
+            Guardar borrador
+          </button>
+          <button
+            onClick={() => handleSubmit(true)}
+            disabled={loading}
+            className="flex-1 bg-gray-900 text-white py-2.5 rounded-lg text-sm font-medium hover:bg-gray-800 disabled:opacity-40 transition-colors"
+          >
+            {loading ? 'Publicando...' : 'Publicar ahora'}
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+--- src\app\admin\posts\page.tsx ---
+import { createClient } from '@/lib/supabase/server'
+import Link from 'next/link'
+
+const CATEGORY_LABELS: Record<string, string> = {
+  mercados: 'Mercados',
+  opinion: 'OpiniÃ³n',
+  informe: 'Informe',
+  aviso: 'Aviso',
+  educacion: 'EducaciÃ³n',
+}
+
+const CATEGORY_COLORS: Record<string, string> = {
+  mercados: 'bg-blue-100 text-blue-700',
+  opinion: 'bg-purple-100 text-purple-700',
+  informe: 'bg-amber-100 text-amber-700',
+  aviso: 'bg-red-100 text-red-700',
+  educacion: 'bg-green-100 text-green-700',
+}
+
+export default async function PostsPage() {
+  const supabase = await createClient()
+  const { data: posts } = await supabase
+    .from('posts')
+    .select('*')
+    .order('created_at', { ascending: false })
+
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-6">
+        <h2 className="text-xl font-medium text-gray-900">Noticias</h2>
+        <Link
+          href="/admin/posts/nuevo"
+          className="bg-gray-900 text-white px-4 py-2 rounded-lg text-sm hover:bg-gray-800 transition-colors"
+        >
+          + Nueva publicaciÃ³n
+        </Link>
+      </div>
+
+      <div className="space-y-3">
+        {!posts || posts.length === 0 ? (
+          <div className="bg-white rounded-xl border border-gray-200 p-8 text-center text-sm text-gray-400">
+            No hay publicaciones todavÃ­a.
+          </div>
+        ) : (
+          posts.map((post: any) => (
+            <div key={post.id} className="bg-white rounded-xl border border-gray-200 p-5 flex items-center gap-4">
+              {post.cover_url && (
+                <img src={post.cover_url} alt="" className="w-14 h-14 rounded-lg object-cover flex-shrink-0" />
+              )}
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2 mb-1">
+                  <span className={`text-xs px-2 py-0.5 rounded-full ${CATEGORY_COLORS[post.category] || 'bg-gray-100 text-gray-600'}`}>
+                    {CATEGORY_LABELS[post.category] || post.category}
+                  </span>
+                  {post.published
+                    ? <span className="text-xs text-green-600 bg-green-50 px-2 py-0.5 rounded-full">Publicado</span>
+                    : <span className="text-xs text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full">Borrador</span>
+                  }
+                </div>
+                <p className="text-sm font-medium text-gray-900 truncate">{post.title}</p>
+                <p className="text-xs text-gray-400 mt-0.5">
+                  {new Date(post.created_at).toLocaleDateString('es-ES')}
+                </p>
+              </div>
+            </div>
+          ))
+        )}
+      </div>
+    </div>
+  )
+}
+
+--- src\app\admin\productos\nuevo\page.tsx ---
+'use client'
+
+import { useState, useEffect } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
+import { createClient } from '@/lib/supabase/client'
+import type { RiskLevel } from '@/lib/types'
+
+const RISK_OPTIONS: { value: RiskLevel; label: string }[] = [
+  { value: 'bajo', label: 'Bajo' },
+  { value: 'moderado', label: 'Moderado' },
+  { value: 'alto', label: 'Alto' },
+  { value: 'muy_alto', label: 'Muy alto' },
+]
+
+export default function NuevoProductoPage() {
+  const router = useRouter()
+  const searchParams = useSearchParams()
+  const supabase = createClient()
+
+  const [clientes, setClientes] = useState<any[]>([])
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState('')
+  const [form, setForm] = useState({
+    client_id: searchParams.get('cliente') || '',
+    name: '',
+    isin: '',
+    manager: '',
+    estimated_return: '',
+    min_horizon_years: '',
+    min_investment: '',
+    management_fee: '',
+    risk_level: 'moderado' as RiskLevel,
+    advisor_note: '',
+    is_priority: false,
+  })
+
+  useEffect(() => {
+    supabase
+      .from('profiles')
+      .select('id, full_name')
+      .eq('role', 'client')
+      .then(({ data }) => setClientes(data || []))
+  }, [])
+
+  function update(field: string, value: any) {
+    setForm(prev => ({ ...prev, [field]: value }))
+  }
+
+  async function handleSubmit() {
+    if (!form.client_id || !form.name) {
+      setError('Cliente y nombre del producto son obligatorios')
+      return
+    }
+    setLoading(true)
+    setError('')
+
+    const { error: err } = await supabase.from('products').insert({
+      client_id: form.client_id,
+      name: form.name,
+      isin: form.isin || null,
+      manager: form.manager || null,
+      estimated_return: form.estimated_return || null,
+      min_horizon_years: form.min_horizon_years ? parseInt(form.min_horizon_years) : null,
+      min_investment: form.min_investment ? parseFloat(form.min_investment) : null,
+      management_fee: form.management_fee ? parseFloat(form.management_fee) : null,
+      risk_level: form.risk_level,
+      advisor_note: form.advisor_note || null,
+      is_priority: form.is_priority,
+    })
+
+    if (err) {
+      setError(err.message)
+      setLoading(false)
+      return
+    }
+
+    const clienteId = form.client_id
+    router.push(clienteId ? `/admin/clientes/${clienteId}` : '/admin/productos')
+    router.refresh()
+  }
+
+  return (
+    <div className="max-w-2xl">
+      <div className="flex items-center gap-4 mb-6">
+        <button onClick={() => router.back()} className="text-sm text-gray-500 hover:text-gray-900">
+          â† Volver
+        </button>
+        <h2 className="text-xl font-medium text-gray-900">Asignar producto</h2>
+      </div>
+
+      <div className="bg-white rounded-xl border border-gray-200 p-6 space-y-5">
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1.5">Cliente *</label>
+          <select
+            value={form.client_id}
+            onChange={e => update('client_id', e.target.value)}
+            className="w-full px-3.5 py-2.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900"
+          >
+            <option value="">Seleccionar cliente...</option>
+            {clientes.map(c => (
+              <option key={c.id} value={c.id}>{c.full_name}</option>
+            ))}
+          </select>
+        </div>
+
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1.5">Nombre del producto *</label>
+            <input
+              type="text"
+              value={form.name}
+              onChange={e => update('name', e.target.value)}
+              placeholder="Ej: Fondo Mixto Global"
+              className="w-full px-3.5 py-2.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1.5">Gestora</label>
+            <input
+              type="text"
+              value={form.manager}
+              onChange={e => update('manager', e.target.value)}
+              placeholder="Ej: Amundi"
+              className="w-full px-3.5 py-2.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900"
+            />
+          </div>
+        </div>
+
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1.5">ISIN</label>
+            <input
+              type="text"
+              value={form.isin}
+              onChange={e => update('isin', e.target.value)}
+              placeholder="Ej: FR0010315770"
+              className="w-full px-3.5 py-2.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1.5">Rentabilidad estimada</label>
+            <input
+              type="text"
+              value={form.estimated_return}
+              onChange={e => update('estimated_return', e.target.value)}
+              placeholder="Ej: 6-8%"
+              className="w-full px-3.5 py-2.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900"
+            />
+          </div>
+        </div>
+
+        <div className="grid grid-cols-3 gap-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1.5">Plazo mÃ­n. (aÃ±os)</label>
+            <input
+              type="number"
+              value={form.min_horizon_years}
+              onChange={e => update('min_horizon_years', e.target.value)}
+              placeholder="3"
+              className="w-full px-3.5 py-2.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1.5">InversiÃ³n mÃ­nima (â‚¬)</label>
+            <input
+              type="number"
+              value={form.min_investment}
+              onChange={e => update('min_investment', e.target.value)}
+              placeholder="5000"
+              className="w-full px-3.5 py-2.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1.5">ComisiÃ³n gestiÃ³n (%)</label>
+            <input
+              type="number"
+              step="0.01"
+              value={form.management_fee}
+              onChange={e => update('management_fee', e.target.value)}
+              placeholder="0.85"
+              className="w-full px-3.5 py-2.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900"
+            />
+          </div>
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1.5">Nivel de riesgo</label>
+          <div className="flex gap-2">
+            {RISK_OPTIONS.map(opt => (
+              <button
+                key={opt.value}
+                onClick={() => update('risk_level', opt.value)}
+                className={`flex-1 py-2 rounded-lg text-xs transition-colors ${
+                  form.risk_level === opt.value
+                    ? 'bg-gray-900 text-white'
+                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                }`}
+              >
+                {opt.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1.5">Nota personalizada para el cliente</label>
+          <textarea
+            value={form.advisor_note}
+            onChange={e => update('advisor_note', e.target.value)}
+            rows={4}
+            placeholder="Explica por quÃ© le recomiendas este producto..."
+            className="w-full px-3.5 py-2.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900 resize-none"
+          />
+        </div>
+
+        <label className="flex items-center gap-3 cursor-pointer">
+          <input
+            type="checkbox"
+            checked={form.is_priority}
+            onChange={e => update('is_priority', e.target.checked)}
+            className="w-4 h-4 rounded"
+          />
+          <span className="text-sm text-gray-700">Marcar como recomendaciÃ³n prioritaria</span>
+        </label>
+
+        {error && (
+          <p className="text-sm text-red-600 bg-red-50 px-3 py-2 rounded-lg">{error}</p>
+        )}
+
+        <button
+          onClick={handleSubmit}
+          disabled={loading}
+          className="w-full bg-gray-900 text-white py-2.5 rounded-lg text-sm font-medium hover:bg-gray-800 disabled:opacity-40 transition-colors"
+        >
+          {loading ? 'Asignando...' : 'Asignar producto'}
+        </button>
+      </div>
+    </div>
+  )
+}
+
+--- src\app\admin\productos\page.tsx ---
+import { createClient } from '@/lib/supabase/server'
+import Link from 'next/link'
+
+const RISK_COLORS: Record<string, string> = {
+  bajo: 'bg-green-100 text-green-700',
+  moderado: 'bg-amber-100 text-amber-700',
+  alto: 'bg-orange-100 text-orange-700',
+  muy_alto: 'bg-red-100 text-red-700',
+}
+
+const RISK_LABELS: Record<string, string> = {
+  bajo: 'Bajo', moderado: 'Moderado', alto: 'Alto', muy_alto: 'Muy alto',
+}
+
+export default async function ProductosAdminPage() {
+  const supabase = await createClient()
+
+  const { data: productos } = await supabase
+    .from('products')
+    .select('*, profiles(full_name)')
+    .order('created_at', { ascending: false })
+
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-6">
+        <h2 className="text-xl font-medium text-gray-900">Productos asignados</h2>
+        <Link
+          href="/admin/productos/nuevo"
+          className="bg-gray-900 text-white px-4 py-2 rounded-lg text-sm hover:bg-gray-800 transition-colors"
+        >
+          + Asignar producto
+        </Link>
+      </div>
+
+      <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+        {!productos || productos.length === 0 ? (
+          <div className="p-8 text-center text-sm text-gray-400">
+            No hay productos asignados todavÃ­a.
+          </div>
+        ) : (
+          <table className="w-full">
+            <thead>
+              <tr className="border-b border-gray-100">
+                <th className="text-left px-6 py-3 text-xs font-medium text-gray-500">Producto</th>
+                <th className="text-left px-6 py-3 text-xs font-medium text-gray-500">Cliente</th>
+                <th className="text-left px-6 py-3 text-xs font-medium text-gray-500">Riesgo</th>
+                <th className="text-left px-6 py-3 text-xs font-medium text-gray-500">Rentab. est.</th>
+                <th className="text-left px-6 py-3 text-xs font-medium text-gray-500">InterÃ©s</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-100">
+              {productos.map((p: any) => (
+                <tr key={p.id} className="hover:bg-gray-50">
+                  <td className="px-6 py-4">
+                    <p className="text-sm font-medium text-gray-900">{p.name}</p>
+                    {p.isin && <p className="text-xs text-gray-400">{p.isin}</p>}
+                  </td>
+                  <td className="px-6 py-4 text-sm text-gray-600">
+                    {(p.profiles as any)?.full_name}
+                  </td>
+                  <td className="px-6 py-4">
+                    <span className={`text-xs px-2 py-0.5 rounded-full ${RISK_COLORS[p.risk_level]}`}>
+                      {RISK_LABELS[p.risk_level]}
+                    </span>
+                  </td>
+                  <td className="px-6 py-4 text-sm text-green-600">{p.estimated_return || 'â€”'}</td>
+                  <td className="px-6 py-4">
+                    {p.interest_expressed
+                      ? <span className="text-xs text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full">Interesado</span>
+                      : <span className="text-xs text-gray-400">â€”</span>
+                    }
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </div>
+    </div>
+  )
+}
+
+--- src\app\admin\layout.tsx ---
+import { redirect } from "next/navigation"
+import { createClient } from "@/lib/supabase/server"
+import AdminSidebar from "@/components/admin/AdminSidebar"
+
+export default async function AdminLayout({ children }: { children: React.ReactNode }) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) redirect("/login")
+
+  const { data: profile } = await supabase.from("profiles").select("*").eq("id", user.id).single()
+  if (profile?.role !== "admin") redirect("/dashboard")
+
+  return (
+    <div style={{minHeight: "100vh", background: "#0D0D0D", color: "#fff", fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif"}}>
+      <AdminSidebar />
+      <main style={{marginLeft: 220, padding: "32px 40px", minHeight: "100vh"}}>
+        {children}
+      </main>
+    </div>
+  )
+}
+
+
+--- src\app\admin\page.tsx ---
+import { createClient } from "@/lib/supabase/server"
+import Link from "next/link"
+
+export default async function AdminPage() {
+  const supabase = await createClient()
+
+  const { count: totalClientes } = await supabase.from("profiles").select("*", { count: "exact", head: true }).eq("role", "client")
+  const { count: totalPosts } = await supabase.from("posts").select("*", { count: "exact", head: true }).eq("published", true)
+  const { count: productosConInteres } = await supabase.from("products").select("*", { count: "exact", head: true }).eq("interest_expressed", true)
+  const { data: intereses } = await supabase.from("products").select("*, profiles(full_name, email)").eq("interest_expressed", true).order("interest_at", { ascending: false }).limit(5)
+
+  const stats = [
+    { label: "Clientes activos", value: totalClientes ?? 0, color: "#22c55e", icon: "◎" },
+    { label: "Posts publicados", value: totalPosts ?? 0, color: "#3b82f6", icon: "◈" },
+    { label: "Intereses pendientes", value: productosConInteres ?? 0, color: "#f97316", icon: "◇" },
+  ]
+
+  return (
+    <div>
+      <div style={{marginBottom: 32}}>
+        <h1 style={{fontSize: 24, fontWeight: 800, letterSpacing: "-0.02em", marginBottom: 4}}>Resumen</h1>
+        <p style={{fontSize: 13, color: "rgba(255,255,255,0.35)"}}>Panel de administracion de WM Patrimonial</p>
+      </div>
+
+      <div style={{display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 14, marginBottom: 28}}>
+        {stats.map(s => (
+          <div key={s.label} style={{background: "#141414", border: "1px solid rgba(255,255,255,0.06)", borderRadius: 12, padding: 20}}>
+            <div style={{display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12}}>
+              <span style={{fontSize: 11, textTransform: "uppercase", letterSpacing: "0.1em", color: "rgba(255,255,255,0.3)"}}>{s.label}</span>
+              <span style={{fontSize: 16, color: s.color}}>{s.icon}</span>
+            </div>
+            <p style={{fontSize: 36, fontWeight: 800, letterSpacing: "-0.02em", color: s.color}}>{s.value}</p>
+          </div>
+        ))}
+      </div>
+
+      <div style={{background: "#141414", border: "1px solid rgba(255,255,255,0.06)", borderRadius: 12, overflow: "hidden"}}>
+        <div style={{padding: "16px 20px", borderBottom: "1px solid rgba(255,255,255,0.06)", display: "flex", alignItems: "center", justifyContent: "space-between"}}>
+          <h3 style={{fontSize: 14, fontWeight: 600}}>Ultimos intereses en productos</h3>
+          <Link href="/admin/clientes" style={{fontSize: 12, color: "rgba(255,255,255,0.35)"}}>Ver todos →</Link>
+        </div>
+        {!intereses || intereses.length === 0 ? (
+          <div style={{padding: "40px 20px", textAlign: "center", fontSize: 13, color: "rgba(255,255,255,0.25)"}}>
+            Ningun cliente ha expresado interes todavia
+          </div>
+        ) : (
+          <div>
+            {intereses.map((p: any) => (
+              <div key={p.id} style={{padding: "14px 20px", borderBottom: "1px solid rgba(255,255,255,0.04)", display: "flex", alignItems: "center", justifyContent: "space-between"}}>
+                <div>
+                  <p style={{fontSize: 14, fontWeight: 500}}>{(p.profiles as any)?.full_name}</p>
+                  <p style={{fontSize: 12, color: "rgba(255,255,255,0.3)"}}>{p.name}</p>
+                </div>
+                <span style={{fontSize: 11, color: "#f97316", background: "rgba(249,115,22,0.1)", border: "1px solid rgba(249,115,22,0.2)", padding: "4px 10px", borderRadius: 20}}>Interesado</span>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
+
+--- src\app\api\admin\cartera\route.ts ---
+import { createClient } from "@/lib/supabase/server"
+import { createClient as createAdminClient } from "@supabase/supabase-js"
+import { NextResponse } from "next/server"
+
+export async function POST(request: Request) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return NextResponse.json({ error: "No autorizado" }, { status: 401 })
+
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("role")
+    .eq("id", user.id)
+    .single()
+
+  if (profile?.role !== "admin") {
+    return NextResponse.json({ error: "No autorizado" }, { status: 403 })
+  }
+
+  const { portfolioId, clienteId, totalValue, ytdReturn, riskProfile, notes, positions } = await request.json()
+
+  const adminSupabase = createAdminClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  )
+
+  if (portfolioId) {
+    await adminSupabase.from("portfolios").update({
+      total_value: totalValue,
+      ytd_return: ytdReturn,
+      risk_profile: riskProfile,
+      notes,
+      last_updated: new Date().toISOString(),
+    }).eq("id", portfolioId)
+
+    await adminSupabase.from("portfolio_positions").delete().eq("portfolio_id", portfolioId)
+
+    if (positions.length > 0) {
+      await adminSupabase.from("portfolio_positions").insert(
+        positions.filter((p: any) => p.asset_name).map((p: any) => ({ ...p, portfolio_id: portfolioId }))
+      )
+    }
+  } else {
+    const { data: newPortfolio } = await adminSupabase.from("portfolios").insert({
+      client_id: clienteId,
+      total_value: totalValue,
+      ytd_return: ytdReturn,
+      risk_profile: riskProfile,
+      notes,
+    }).select().single()
+
+    if (newPortfolio && positions.length > 0) {
+      await adminSupabase.from("portfolio_positions").insert(
+        positions.filter((p: any) => p.asset_name).map((p: any) => ({ ...p, portfolio_id: newPortfolio.id }))
+      )
+    }
+  }
+
+  return NextResponse.json({ ok: true })
+}
+
+
+--- src\app\api\admin\clientes\route.ts ---
+import { createClient } from '@/lib/supabase/server'
+import { createClient as createAdminClient } from '@supabase/supabase-js'
+import { NextResponse } from 'next/server'
+
+export async function POST(request: Request) {
+  // Verificar que quien llama es admin
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
+
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('role')
+    .eq('id', user.id)
+    .single()
+
+  if (profile?.role !== 'admin') {
+    return NextResponse.json({ error: 'No autorizado' }, { status: 403 })
+  }
+
+  const { full_name, email, password, phone } = await request.json()
+
+  // Usar service role para crear usuario sin verificaciÃ³n de email
+  const adminSupabase = createAdminClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  )
+
+  const { data: newUser, error: authError } = await adminSupabase.auth.admin.createUser({
+    email,
+    password,
+    email_confirm: true,
+    user_metadata: { full_name, role: 'client' },
+  })
+
+  if (authError) {
+    return NextResponse.json({ error: authError.message }, { status: 400 })
+  }
+
+  // Actualizar telÃ©fono si se proporcionÃ³
+  if (phone && newUser.user) {
+    await adminSupabase
+      .from('profiles')
+      .update({ phone })
+      .eq('id', newUser.user.id)
+  }
+
+  // Crear cartera vacÃ­a para el cliente
+  if (newUser.user) {
+    await adminSupabase.from('portfolios').insert({
+      client_id: newUser.user.id,
+      total_value: 0,
+      ytd_return: 0,
+      risk_profile: 'moderado',
+    })
+  }
+
+  return NextResponse.json({ ok: true, user: newUser.user })
+}
+
+--- src\app\api\contacto\route.ts ---
+import { sendTelegram } from "@/lib/telegram"
+import { NextResponse } from "next/server"
+
+export async function POST(request: Request) {
+  const { nombre, email, telefono, mensaje } = await request.json()
+
+  if (!nombre || !email || !mensaje) {
+    return NextResponse.json({ error: "Faltan campos obligatorios" }, { status: 400 })
+  }
+
+  await sendTelegram(
+    `📩 *Nuevo mensaje de contacto*\n\n` +
+    `👤 *Nombre:* ${nombre}\n` +
+    `📧 *Email:* ${email}\n` +
+    `📱 *Telefono:* ${telefono || "no indicado"}\n` +
+    `💬 *Mensaje:* ${mensaje}`
+  )
+
+  return NextResponse.json({ ok: true })
+}
+
+
+--- src\app\api\productos\interes\route.ts ---
+import { createClient } from "@/lib/supabase/server"
+import { createClient as createAdminClient } from "@supabase/supabase-js"
+import { sendTelegram } from "@/lib/telegram"
+import { NextResponse } from "next/server"
+
+export async function POST(request: Request) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return NextResponse.json({ error: "No autorizado" }, { status: 401 })
+
+  const { productoId } = await request.json()
+
+  const adminSupabase = createAdminClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  )
+
+  const { data: producto } = await adminSupabase
+    .from("products")
+    .update({ interest_expressed: true, interest_at: new Date().toISOString() })
+    .eq("id", productoId)
+    .eq("client_id", user.id)
+    .select("name")
+    .single()
+
+  const { data: profile } = await adminSupabase
+    .from("profiles")
+    .select("full_name, email, phone")
+    .eq("id", user.id)
+    .single()
+
+  await sendTelegram(
+    `💼 *Nuevo interes en producto*\n\n` +
+    `👤 *Cliente:* ${profile?.full_name}\n` +
+    `📧 *Email:* ${profile?.email}\n` +
+    `📱 *Telefono:* ${profile?.phone || "no indicado"}\n` +
+    `📊 *Producto:* ${producto?.name}`
+  )
+
+  return NextResponse.json({ ok: true })
+}
+
+
+--- src\app\dashboard\documentos\page.tsx ---
+import { createClient } from "@/lib/supabase/server"
+import { redirect } from "next/navigation"
+
+export default async function DocumentosPage() {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) redirect("/login")
+
+  const { data: documentos } = await supabase
+    .from("documents")
+    .select("*")
+    .eq("client_id", user.id)
+    .order("created_at", { ascending: false })
+
+  return (
+    <div>
+      <h2 className="text-xl font-medium text-gray-900 mb-6">Documentos</h2>
+      {!documentos || documentos.length === 0 ? (
+        <div className="bg-white rounded-xl border border-gray-200 p-8 text-center text-sm text-gray-400">
+          No hay documentos disponibles todavia.
+        </div>
+      ) : (
+        <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+          <div className="divide-y divide-gray-100">
+            {documentos.map((doc: any) => (
+              <div key={doc.id} className="px-6 py-4 flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 bg-red-50 rounded-lg flex items-center justify-center text-xs font-medium text-red-600">
+                    PDF
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-gray-900">{doc.name}</p>
+                    <p className="text-xs text-gray-400">
+                      {new Date(doc.created_at).toLocaleDateString("es-ES")}
+                    </p>
+                  </div>
+                </div>
+                <a href={doc.file_url} target="_blank" rel="noopener noreferrer" className="text-xs text-gray-600 border border-gray-200 px-3 py-1.5 rounded-lg hover:bg-gray-50 transition-colors">
+                  Descargar
+                </a>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+
+--- src\app\dashboard\noticias\page.tsx ---
+import { createClient } from "@/lib/supabase/server"
+
+const CATEGORY_LABELS: Record<string, string> = {
+  mercados: "Mercados",
+  opinion: "Opinion",
+  informe: "Informe",
+  aviso: "Aviso",
+  educacion: "Educacion",
+}
+
+const CATEGORY_COLORS: Record<string, string> = {
+  mercados: "bg-blue-100 text-blue-700",
+  opinion: "bg-purple-100 text-purple-700",
+  informe: "bg-amber-100 text-amber-700",
+  aviso: "bg-red-100 text-red-700",
+  educacion: "bg-green-100 text-green-700",
+}
+
+export default async function NoticiasPage() {
+  const supabase = await createClient()
+  const { data: posts } = await supabase
+    .from("posts")
+    .select("*")
+    .eq("published", true)
+    .order("published_at", { ascending: false })
+
+  return (
+    <div>
+      <h2 className="text-xl font-medium text-gray-900 mb-6">Noticias</h2>
+      {!posts || posts.length === 0 ? (
+        <div className="bg-white rounded-xl border border-gray-200 p-8 text-center text-sm text-gray-400">
+          Todavia no hay publicaciones. Vuelve pronto.
+        </div>
+      ) : (
+        <div className="space-y-4">
+          {posts.map((post: any) => (
+            <div key={post.id} className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+              {post.cover_url && (
+                <img src={post.cover_url} alt={post.title} className="w-full h-48 object-cover" />
+              )}
+              <div className="p-6">
+                <div className="flex items-center gap-2 mb-3">
+                  <span className={`text-xs px-2 py-0.5 rounded-full ${CATEGORY_COLORS[post.category] || "bg-gray-100 text-gray-600"}`}>
+                    {CATEGORY_LABELS[post.category] || post.category}
+                  </span>
+                  <span className="text-xs text-gray-400">
+                    {new Date(post.published_at || post.created_at).toLocaleDateString("es-ES", { day: "numeric", month: "long", year: "numeric" })}
+                  </span>
+                </div>
+                <h3 className="text-base font-medium text-gray-900 mb-2">{post.title}</h3>
+                <p className="text-sm text-gray-600 leading-relaxed whitespace-pre-line">{post.content}</p>
+                {post.pdf_url && (
+                  <a href={post.pdf_url} target="_blank" rel="noopener noreferrer" className="inline-block mt-4 text-xs text-gray-600 border border-gray-200 px-3 py-1.5 rounded-lg hover:bg-gray-50 transition-colors">
+                    Descargar PDF adjunto
+                  </a>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
+
+--- src\app\dashboard\productos\page.tsx ---
+import { createClient } from '@/lib/supabase/server'
+import { redirect } from 'next/navigation'
+import ProductoInteresButton from '@/components/dashboard/ProductoInteresButton'
+
+const RISK_COLORS: Record<string, string> = {
+  bajo: 'bg-green-100 text-green-700',
+  moderado: 'bg-amber-100 text-amber-700',
+  alto: 'bg-orange-100 text-orange-700',
+  muy_alto: 'bg-red-100 text-red-700',
+}
+
+const RISK_LABELS: Record<string, string> = {
+  bajo: 'Riesgo bajo',
+  moderado: 'Riesgo moderado',
+  alto: 'Riesgo alto',
+  muy_alto: 'Riesgo muy alto',
+}
+
+export default async function ProductosPage() {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) redirect('/login')
+
+  const { data: productos } = await supabase
+    .from('products')
+    .select('*')
+    .eq('client_id', user.id)
+    .eq('is_visible', true)
+    .order('is_priority', { ascending: false })
+    .order('created_at', { ascending: false })
+
+  return (
+    <div>
+      <h2 className="text-xl font-medium text-gray-900 mb-2">Mis recomendaciones</h2>
+      <p className="text-sm text-gray-500 mb-6">Productos seleccionados por tu asesor. Solo tÃº puedes ver esto.</p>
+
+      {!productos || productos.length === 0 ? (
+        <div className="bg-white rounded-xl border border-gray-200 p-8 text-center text-sm text-gray-400">
+          Tu asesor todavÃ­a no te ha asignado productos. Pronto aparecerÃ¡n aquÃ­.
+        </div>
+      ) : (
+        <div className="space-y-4">
+          {productos.map((p: any) => (
+            <div
+              key={p.id}
+              className={`bg-white rounded-xl border p-6 ${p.is_priority ? 'border-blue-200' : 'border-gray-200'}`}
+            >
+              {p.is_priority && (
+                <div className="bg-blue-50 text-blue-700 text-xs font-medium px-3 py-1.5 rounded-lg mb-4 inline-block">
+                  RecomendaciÃ³n prioritaria
+                </div>
+              )}
+
+              <div className="flex items-start justify-between mb-4">
+                <div>
+                  <h3 className="text-base font-medium text-gray-900">{p.name}</h3>
+                  {p.isin && (
+                    <p className="text-xs text-gray-400 mt-0.5">{p.manager && `${p.manager} Â· `}ISIN: {p.isin}</p>
+                  )}
+                </div>
+                <span className={`text-xs px-2 py-1 rounded-full ${RISK_COLORS[p.risk_level]}`}>
+                  {RISK_LABELS[p.risk_level]}
+                </span>
+              </div>
+
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
+                {p.estimated_return && (
+                  <div className="bg-gray-50 rounded-lg p-3 text-center">
+                    <p className="text-xs text-gray-400 mb-1">Rentab. estimada</p>
+                    <p className="text-sm font-medium text-green-600">{p.estimated_return}</p>
+                  </div>
+                )}
+                {p.min_horizon_years && (
+                  <div className="bg-gray-50 rounded-lg p-3 text-center">
+                    <p className="text-xs text-gray-400 mb-1">Plazo mÃ­nimo</p>
+                    <p className="text-sm font-medium text-gray-900">{p.min_horizon_years} aÃ±os</p>
+                  </div>
+                )}
+                {p.min_investment && (
+                  <div className="bg-gray-50 rounded-lg p-3 text-center">
+                    <p className="text-xs text-gray-400 mb-1">Inv. mÃ­nima</p>
+                    <p className="text-sm font-medium text-gray-900">â‚¬{Number(p.min_investment).toLocaleString('es-ES')}</p>
+                  </div>
+                )}
+                {p.management_fee && (
+                  <div className="bg-gray-50 rounded-lg p-3 text-center">
+                    <p className="text-xs text-gray-400 mb-1">ComisiÃ³n</p>
+                    <p className="text-sm font-medium text-gray-900">{p.management_fee}%</p>
+                  </div>
+                )}
+              </div>
+
+              {p.advisor_note && (
+                <div className="bg-gray-50 rounded-lg px-4 py-3 mb-4 border-l-2 border-gray-300">
+                  <p className="text-xs text-gray-400 mb-1">Nota de tu asesor</p>
+                  <p className="text-sm text-gray-700 leading-relaxed">{p.advisor_note}</p>
+                </div>
+              )}
+
+              <ProductoInteresButton
+                productoId={p.id}
+                interesExpresado={p.interest_expressed}
+              />
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
+--- src\app\dashboard\layout.tsx ---
+import { redirect } from "next/navigation"
+import { createClient } from "@/lib/supabase/server"
+import DashboardNav from "@/components/dashboard/DashboardNav"
+
+export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) redirect("/login")
+
+  const { data: profile } = await supabase.from("profiles").select("*").eq("id", user.id).single()
+  if (profile?.role === "admin") redirect("/admin")
+
+  return (
+    <div style={{minHeight: "100vh", background: "#0D0D0D", color: "#fff", fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif"}}>
+      <DashboardNav fullName={profile?.full_name || ""} />
+      <main style={{maxWidth: 1100, margin: "0 auto", padding: "32px 24px"}}>
+        {children}
+      </main>
+    </div>
+  )
+}
+
+
+--- src\app\dashboard\page.tsx ---
+import { createClient } from "@/lib/supabase/server"
+import { redirect } from "next/navigation"
+
+const ASSET_LABELS: Record<string, string> = {
+  renta_variable: "Renta variable",
+  renta_fija: "Renta fija",
+  liquidez: "Liquidez",
+  alternativo: "Alternativo",
+}
+
+const ASSET_COLORS: Record<string, string> = {
+  renta_variable: "#3b82f6",
+  renta_fija: "#22c55e",
+  liquidez: "#f97316",
+  alternativo: "#a855f7",
+}
+
+export default async function DashboardPage() {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) redirect("/login")
+
+  const { data: portfolio } = await supabase.from("portfolios").select("*, portfolio_positions(*)").eq("client_id", user.id).single()
+  const { data: profile } = await supabase.from("profiles").select("full_name").eq("id", user.id).single()
+
+  const positions = portfolio?.portfolio_positions || []
+
+  return (
+    <div>
+      <div style={{marginBottom: 28}}>
+        <h1 style={{fontSize: 22, fontWeight: 800, letterSpacing: "-0.02em", marginBottom: 4}}>
+          Hola, {profile?.full_name?.split(" ")[0]} 👋
+        </h1>
+        <p style={{fontSize: 13, color: "rgba(255,255,255,0.35)"}}>
+          Aqui tienes el estado actual de tu cartera
+        </p>
+      </div>
+
+      {!portfolio || portfolio.total_value === 0 ? (
+        <div style={{background: "#141414", border: "1px solid rgba(255,255,255,0.06)", borderRadius: 12, padding: 48, textAlign: "center"}}>
+          <p style={{fontSize: 32, marginBottom: 12}}>◎</p>
+          <p style={{fontSize: 15, fontWeight: 600, marginBottom: 8}}>Tu cartera esta en preparacion</p>
+          <p style={{fontSize: 13, color: "rgba(255,255,255,0.35)"}}>Tu asesor configurara tu cartera en breve. Pronto estara disponible aqui.</p>
+        </div>
+      ) : (
+        <>
+          <div style={{display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 12, marginBottom: 16}}>
+            {[
+              { label: "Valor total", value: `${Number(portfolio.total_value).toLocaleString("es-ES")}`, suffix: "", color: "#fff", sub: "EUR" },
+              { label: "Rentabilidad YTD", value: `${portfolio.ytd_return >= 0 ? "+" : ""}${portfolio.ytd_return}%`, color: portfolio.ytd_return >= 0 ? "#22c55e" : "#ef4444", sub: portfolio.ytd_return >= 0 ? "Positiva" : "Negativa" },
+              { label: "Perfil de riesgo", value: portfolio.risk_profile, color: "#a855f7", sub: "Revisado" },
+            ].map(s => (
+              <div key={s.label} style={{background: "#141414", border: "1px solid rgba(255,255,255,0.06)", borderRadius: 12, padding: 18}}>
+                <p style={{fontSize: 11, textTransform: "uppercase", letterSpacing: "0.1em", color: "rgba(255,255,255,0.3)", marginBottom: 10}}>{s.label}</p>
+                <p style={{fontSize: 26, fontWeight: 800, letterSpacing: "-0.02em", color: s.color, marginBottom: 4, textTransform: "capitalize"}}>{s.value}</p>
+                <p style={{fontSize: 11, color: "rgba(255,255,255,0.25)"}}>{s.sub}</p>
+              </div>
+            ))}
+          </div>
+
+          {positions.length > 0 && (
+            <div style={{background: "#141414", border: "1px solid rgba(255,255,255,0.06)", borderRadius: 12, overflow: "hidden", marginBottom: 16}}>
+              <div style={{padding: "14px 18px", borderBottom: "1px solid rgba(255,255,255,0.06)"}}>
+                <h3 style={{fontSize: 13, fontWeight: 600}}>Posiciones</h3>
+              </div>
+              <table style={{width: "100%", borderCollapse: "collapse"}}>
+                <thead>
+                  <tr style={{borderBottom: "1px solid rgba(255,255,255,0.05)"}}>
+                    {["Activo", "Tipo", "Valor", "Peso", "Rentab."].map(h => (
+                      <th key={h} style={{textAlign: "left", padding: "10px 18px", fontSize: 11, textTransform: "uppercase", letterSpacing: "0.08em", color: "rgba(255,255,255,0.25)", fontWeight: 500}}>{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {positions.map((pos: any) => (
+                    <tr key={pos.id} style={{borderBottom: "1px solid rgba(255,255,255,0.03)"}}>
+                      <td style={{padding: "12px 18px", fontSize: 13, fontWeight: 500}}>{pos.asset_name}</td>
+                      <td style={{padding: "12px 18px"}}>
+                        <span style={{fontSize: 11, color: ASSET_COLORS[pos.asset_type] || "#fff", background: `${ASSET_COLORS[pos.asset_type]}15`, border: `1px solid ${ASSET_COLORS[pos.asset_type]}25`, padding: "3px 8px", borderRadius: 20}}>
+                          {ASSET_LABELS[pos.asset_type] || pos.asset_type}
+                        </span>
+                      </td>
+                      <td style={{padding: "12px 18px", fontSize: 13}}>{Number(pos.value).toLocaleString("es-ES")}</td>
+                      <td style={{padding: "12px 18px", fontSize: 13, color: "rgba(255,255,255,0.5)"}}>{pos.weight_pct}%</td>
+                      <td style={{padding: "12px 18px"}}>
+                        <span style={{fontSize: 13, fontWeight: 600, color: pos.return_pct >= 0 ? "#22c55e" : "#ef4444"}}>
+                          {pos.return_pct >= 0 ? "+" : ""}{pos.return_pct}%
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+
+          {portfolio.notes && (
+            <div style={{background: "rgba(34,197,94,0.04)", border: "1px solid rgba(34,197,94,0.12)", borderRadius: 12, padding: 16}}>
+              <p style={{fontSize: 11, textTransform: "uppercase", letterSpacing: "0.1em", color: "#22c55e", marginBottom: 8}}>Nota de tu asesor</p>
+              <p style={{fontSize: 13, color: "rgba(255,255,255,0.6)", lineHeight: 1.6}}>{portfolio.notes}</p>
+            </div>
+          )}
+        </>
+      )}
+    </div>
+  )
+}
+
+
+--- src\app\login\LoginClient.tsx ---
+"use client"
+
+import { useState } from "react"
+import { useRouter } from "next/navigation"
+import { createClient } from "@/lib/supabase/client"
+
+export default function LoginClient() {
+  const router = useRouter()
+  const supabase = createClient()
+  const [email, setEmail] = useState("")
+  const [password, setPassword] = useState("")
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState("")
+
+  async function handleLogin() {
+    setLoading(true)
+    setError("")
+
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password })
+
+    if (error) {
+      setError("Email o contrasena incorrectos")
+      setLoading(false)
+      return
+    }
+
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("role")
+      .eq("id", data.user.id)
+      .single()
+
+    router.push(profile?.role === "admin" ? "/admin" : "/dashboard")
+    router.refresh()
+  }
+
+  return (
+    <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+      <div className="w-full max-w-sm">
+        <div className="text-center mb-8">
+          <h1 className="text-2xl font-medium text-gray-900">Gestion Patrimonial</h1>
+          <p className="text-sm text-gray-500 mt-1">Accede a tu area privada</p>
+        </div>
+        <div className="bg-white rounded-2xl border border-gray-200 p-8">
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1.5">Email</label>
+              <input
+                type="email"
+                value={email}
+                onChange={e => setEmail(e.target.value)}
+                onKeyDown={e => e.key === "Enter" && handleLogin()}
+                placeholder="tu@email.com"
+                className="w-full px-3.5 py-2.5 rounded-lg border border-gray-200 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-transparent"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1.5">Contrasena</label>
+              <input
+                type="password"
+                value={password}
+                onChange={e => setPassword(e.target.value)}
+                onKeyDown={e => e.key === "Enter" && handleLogin()}
+                placeholder="........"
+                className="w-full px-3.5 py-2.5 rounded-lg border border-gray-200 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-transparent"
+              />
+            </div>
+            {error && (
+              <p className="text-sm text-red-600 bg-red-50 px-3 py-2 rounded-lg">{error}</p>
+            )}
+            <button
+              onClick={handleLogin}
+              disabled={loading || !email || !password}
+              className="w-full bg-gray-900 text-white py-2.5 rounded-lg text-sm font-medium hover:bg-gray-800 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+            >
+              {loading ? "Entrando..." : "Entrar"}
+            </button>
+          </div>
+        </div>
+        <p className="text-center text-xs text-gray-400 mt-6">
+          Problemas para acceder? Contacta con tu asesor.
+        </p>
+      </div>
+    </div>
+  )
+}
+
+
+--- src\app\login\page.tsx ---
+export const dynamic = "force-dynamic"
+
+import LoginClient from "./LoginClient"
+
+export default function LoginPage() {
+  return <LoginClient />
+}
+
+
+--- src\app\ContactForm.tsx ---
+"use client"
+
+import { useState } from "react"
+
+export default function ContactForm() {
+  const [form, setForm] = useState({ nombre: "", email: "", telefono: "", mensaje: "" })
+  const [loading, setLoading] = useState(false)
+  const [sent, setSent] = useState(false)
+  const [error, setError] = useState("")
+
+  function update(field: string, value: string) {
+    setForm(prev => ({ ...prev, [field]: value }))
+  }
+
+  async function handleSubmit() {
+    if (!form.nombre || !form.email || !form.mensaje) {
+      setError("Nombre, email y mensaje son obligatorios")
+      return
+    }
+    setLoading(true)
+    setError("")
+    const res = await fetch("/api/contacto", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(form),
+    })
+    if (res.ok) setSent(true)
+    else setError("Error al enviar. Intentalo de nuevo.")
+    setLoading(false)
+  }
+
+  if (sent) {
+    return (
+      <div className="border border-black/10 p-10 text-center bg-white/50">
+        <p className="text-xs uppercase tracking-widest text-black/30 mb-4">Recibido</p>
+        <p className="text-2xl font-light mb-2" style={{fontFamily: "Georgia, serif"}}>Mensaje enviado.</p>
+        <p className="text-sm text-black/40">Me pondre en contacto contigo en menos de 24 horas.</p>
+      </div>
+    )
+  }
+
+  return (
+    <div className="space-y-0">
+      {[
+        { field: "nombre", label: "Nombre", type: "text", placeholder: "Tu nombre completo" },
+        { field: "email", label: "Email", type: "email", placeholder: "tu@email.com" },
+        { field: "telefono", label: "Telefono", type: "tel", placeholder: "+34 600 000 000" },
+      ].map((f) => (
+        <div key={f.field} className="border-t border-black/10 py-4">
+          <label className="block text-xs uppercase tracking-widest text-black/30 mb-2">{f.label}</label>
+          <input
+            type={f.type}
+            value={(form as any)[f.field]}
+            onChange={e => update(f.field, e.target.value)}
+            placeholder={f.placeholder}
+            className="w-full bg-transparent text-sm text-black placeholder:text-black/20 focus:outline-none py-1"
+          />
+        </div>
+      ))}
+      <div className="border-t border-black/10 py-4">
+        <label className="block text-xs uppercase tracking-widest text-black/30 mb-2">Mensaje</label>
+        <textarea
+          value={form.mensaje}
+          onChange={e => update("mensaje", e.target.value)}
+          placeholder="Cuentame tu situacion..."
+          rows={4}
+          className="w-full bg-transparent text-sm text-black placeholder:text-black/20 focus:outline-none resize-none py-1"
+        />
+      </div>
+      <div className="border-t border-black/10 pt-6">
+        {error && <p className="text-xs text-red-500 mb-4">{error}</p>}
+        <button
+          onClick={handleSubmit}
+          disabled={loading}
+          className="text-xs uppercase tracking-widest border border-black px-8 py-4 hover:bg-black hover:text-white transition-all duration-300 disabled:opacity-30 w-full"
+        >
+          {loading ? "Enviando..." : "Enviar mensaje →"}
+        </button>
+        <p className="text-xs text-black/20 mt-3 text-center">Tus datos no seran compartidos con terceros.</p>
+      </div>
+    </div>
+  )
+}
+
+
+--- src\app\ContactFormWope.tsx ---
+"use client"
+
+import { useState } from "react"
+
+export default function ContactFormWope() {
+  const [form, setForm] = useState({ nombre: "", email: "", telefono: "", mensaje: "" })
+  const [loading, setLoading] = useState(false)
+  const [sent, setSent] = useState(false)
+  const [error, setError] = useState("")
+  const [focused, setFocused] = useState("")
+
+  function update(field: string, value: string) {
+    setForm(prev => ({ ...prev, [field]: value }))
+  }
+
+  async function handleSubmit() {
+    if (!form.nombre || !form.email || !form.mensaje) {
+      setError("Nombre, email y mensaje son obligatorios")
+      return
+    }
+    setLoading(true)
+    setError("")
+    const res = await fetch("/api/contacto", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(form),
+    })
+    if (res.ok) setSent(true)
+    else setError("Error al enviar. Intentalo de nuevo.")
+    setLoading(false)
+  }
+
+  const inputStyle = (field: string) => ({
+    width: "100%",
+    background: focused === field ? "rgba(255,255,255,0.05)" : "rgba(255,255,255,0.02)",
+    border: `1px solid ${focused === field ? "rgba(34,197,94,0.4)" : "rgba(255,255,255,0.08)"}`,
+    borderRadius: 10,
+    padding: "12px 14px",
+    fontSize: 14,
+    color: "#fff",
+    outline: "none",
+    transition: "all 0.2s",
+    fontFamily: "-apple-system, sans-serif",
+    cursor: "none",
+  })
+
+  if (sent) {
+    return (
+      <div style={{background: "rgba(34,197,94,0.06)", border: "1px solid rgba(34,197,94,0.2)", borderRadius: 16, padding: 40, textAlign: "center"}}>
+        <div style={{width: 48, height: 48, borderRadius: "50%", background: "rgba(34,197,94,0.1)", border: "1px solid rgba(34,197,94,0.3)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 16px", fontSize: 20, color: "#22c55e"}}>✓</div>
+        <p style={{fontSize: 18, fontWeight: 700, marginBottom: 8}}>Mensaje recibido</p>
+        <p style={{fontSize: 13, color: "rgba(255,255,255,0.4)"}}>Me pondre en contacto contigo en menos de 24 horas.</p>
+      </div>
+    )
+  }
+
+  return (
+    <div style={{background: "#141414", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 16, padding: 28}}>
+      <div style={{display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 12}}>
+        <div>
+          <label style={{display: "block", fontSize: 11, textTransform: "uppercase", letterSpacing: "0.1em", color: "rgba(255,255,255,0.35)", marginBottom: 6}}>Nombre *</label>
+          <input
+            type="text"
+            value={form.nombre}
+            onChange={e => update("nombre", e.target.value)}
+            onFocus={() => setFocused("nombre")}
+            onBlur={() => setFocused("")}
+            placeholder="Tu nombre"
+            style={{...inputStyle("nombre"), boxSizing: "border-box"} as any}
+          />
+        </div>
+        <div>
+          <label style={{display: "block", fontSize: 11, textTransform: "uppercase", letterSpacing: "0.1em", color: "rgba(255,255,255,0.35)", marginBottom: 6}}>Telefono</label>
+          <input
+            type="tel"
+            value={form.telefono}
+            onChange={e => update("telefono", e.target.value)}
+            onFocus={() => setFocused("telefono")}
+            onBlur={() => setFocused("")}
+            placeholder="+34 600 000 000"
+            style={{...inputStyle("telefono"), boxSizing: "border-box"} as any}
+          />
+        </div>
+      </div>
+      <div style={{marginBottom: 12}}>
+        <label style={{display: "block", fontSize: 11, textTransform: "uppercase", letterSpacing: "0.1em", color: "rgba(255,255,255,0.35)", marginBottom: 6}}>Email *</label>
+        <input
+          type="email"
+          value={form.email}
+          onChange={e => update("email", e.target.value)}
+          onFocus={() => setFocused("email")}
+          onBlur={() => setFocused("")}
+          placeholder="tu@email.com"
+          style={inputStyle("email") as any}
+        />
+      </div>
+      <div style={{marginBottom: 16}}>
+        <label style={{display: "block", fontSize: 11, textTransform: "uppercase", letterSpacing: "0.1em", color: "rgba(255,255,255,0.35)", marginBottom: 6}}>Mensaje *</label>
+        <textarea
+          value={form.mensaje}
+          onChange={e => update("mensaje", e.target.value)}
+          onFocus={() => setFocused("mensaje")}
+          onBlur={() => setFocused("")}
+          placeholder="Cuentame tu situacion..."
+          rows={4}
+          style={{...inputStyle("mensaje"), resize: "none", boxSizing: "border-box"} as any}
+        />
+      </div>
+      {error && <p style={{fontSize: 12, color: "#ef4444", marginBottom: 12, background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.2)", borderRadius: 8, padding: "8px 12px"}}>{error}</p>}
+      <button
+        onClick={handleSubmit}
+        disabled={loading}
+        style={{width: "100%", background: loading ? "rgba(34,197,94,0.5)" : "#22c55e", color: "#000", border: "none", borderRadius: 10, padding: "14px", fontSize: 14, fontWeight: 700, cursor: "none", transition: "all 0.2s", boxShadow: "0 0 20px rgba(34,197,94,0.2)"}}
+      >
+        {loading ? "Enviando..." : "Enviar mensaje →"}
+      </button>
+      <p style={{fontSize: 11, color: "rgba(255,255,255,0.15)", textAlign: "center", marginTop: 12, textTransform: "uppercase", letterSpacing: "0.08em"}}>Tus datos no seran compartidos</p>
+    </div>
+  )
+}
+
+
+--- src\app\globals.css ---
+@import "tailwindcss";
+
+:root {
+  --bg: #0D0D0D;
+  --surface: #141414;
+  --surface2: #1a1a1a;
+  --border: rgba(255,255,255,0.06);
+  --border-hover: rgba(255,255,255,0.12);
+  --text: #ffffff;
+  --text-muted: rgba(255,255,255,0.45);
+  --text-dim: rgba(255,255,255,0.2);
+  --green: #22c55e;
+  --blue: #3b82f6;
+  --purple: #a855f7;
+  --orange: #f97316;
+  --red: #ef4444;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  -webkit-font-smoothing: antialiased;
+  cursor: none;
+}
+
+a { color: inherit; text-decoration: none; }
+
+::-webkit-scrollbar { width: 4px; }
+::-webkit-scrollbar-track { background: var(--bg); }
+::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 2px; }
+
+
+--- src\app\layout.tsx ---
+import type { Metadata } from "next";
+import { Geist, Geist_Mono } from "next/font/google";
+import "./globals.css";
+
+const geistSans = Geist({
+  variable: "--font-geist-sans",
+  subsets: ["latin"],
+});
+
+const geistMono = Geist_Mono({
+  variable: "--font-geist-mono",
+  subsets: ["latin"],
+});
+
+export const metadata: Metadata = {
+  title: "Create Next App",
+  description: "Generated by create next app",
+};
+
+export default function RootLayout({
+  children,
+}: Readonly<{
+  children: React.ReactNode;
+}>) {
+  return (
+    <html
+      lang="en"
+      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+    >
+      <body className="min-h-full flex flex-col">{children}</body>
+    </html>
+  );
+}
+
+
+--- src\app\page.tsx ---
+"use client"
+
+import Link from "next/link"
+import { motion, useScroll, useTransform } from "framer-motion"
+import { useState, useRef, useEffect } from "react"
+import ContactFormWope from "./ContactFormWope"
+
+const FEATURES = [
+  { color: "#22c55e", icon: "◈", title: "Cartera en tiempo real", desc: "Visualiza el valor de tu patrimonio, posiciones y rentabilidad actualizada al momento." },
+  { color: "#3b82f6", icon: "◎", title: "Productos exclusivos", desc: "Accede a recomendaciones privadas de inversion seleccionadas por tu asesor." },
+  { color: "#a855f7", icon: "◇", title: "Noticias del mercado", desc: "Analisis y comentarios del asesor directamente en tu portal, como un feed privado." },
+  { color: "#f97316", icon: "△", title: "Documentos seguros", desc: "Todos tus informes y documentos en un solo lugar, accesibles en cualquier momento." },
+  { color: "#ec4899", icon: "○", title: "Notificaciones instant.", desc: "Tu asesor te avisa al instante cuando hay novedades relevantes para tu cartera." },
+  { color: "#06b6d4", icon: "□", title: "Historial completo", desc: "Accede a toda la evolucion de tu patrimonio desde el primer dia." },
+]
+
+const STATS = [
+  { value: "+10", label: "Anos de experiencia" },
+  { value: "+50", label: "Clientes activos" },
+  { value: "10M+", label: "Euros gestionados" },
+  { value: "8.2%", label: "Rentabilidad media" },
+]
+
+const FAQ = [
+  { q: "Que es WM Patrimonial?", a: "Un servicio de gestion patrimonial independiente. Sin vinculacion a bancos ni entidades financieras. Solo trabajo para ti." },
+  { q: "Como accedo a mi cartera?", a: "Recibes acceso a tu portal privado donde puedes ver tu cartera, noticias del mercado y productos recomendados en tiempo real." },
+  { q: "Con que frecuencia se actualiza mi cartera?", a: "Tu asesor actualiza los datos manualmente con cada cambio relevante. Ademas recibes una notificacion cada vez que hay una actualizacion." },
+  { q: "Es segura mi informacion?", a: "Si. Toda la informacion esta cifrada y tu portal es completamente privado. Ningun otro cliente puede ver tus datos." },
+  { q: "Cual es el coste del servicio?", a: "Dependiendo de tu patrimonio y necesidades, acordamos una estructura de honorarios transparente y sin letra pequena. Primera consulta gratuita." },
+]
+
+export default function HomePage() {
+  const [openFaq, setOpenFaq] = useState<number | null>(null)
+  const heroRef = useRef<HTMLDivElement>(null)
+  const { scrollY } = useScroll()
+  const heroImageY = useTransform(scrollY, [0, 500], [0, -60])
+
+  return (
+    <div className="min-h-screen" style={{background: "#0D0D0D", color: "#fff", fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif"}}>
+
+      {/* Nav */}
+      <motion.nav
+        initial={{ opacity: 0, y: -20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5 }}
+        style={{position: "sticky", top: 0, zIndex: 50, background: "rgba(13,13,13,0.85)", backdropFilter: "blur(12px)", borderBottom: "1px solid rgba(255,255,255,0.06)", padding: "0 2rem"}}
+      >
+        <div style={{maxWidth: 1200, margin: "0 auto", display: "flex", alignItems: "center", justifyContent: "space-between", height: 60}}>
+          <div style={{display: "flex", alignItems: "center", gap: 8}}>
+            <div style={{width: 28, height: 28, borderRadius: 8, background: "linear-gradient(135deg, #22c55e, #16a34a)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14, fontWeight: 700}}>W</div>
+            <span style={{fontWeight: 700, fontSize: 15, letterSpacing: "-0.02em"}}>WM Patrimonial</span>
+          </div>
+          <div style={{display: "flex", alignItems: "center", gap: 32}}>
+            {["#servicios", "#nosotros", "#faq", "#contacto"].map((href, i) => (
+              <a key={href} href={href} style={{fontSize: 13, color: "rgba(255,255,255,0.5)", transition: "color 0.2s"}}
+                onMouseEnter={e => (e.target as HTMLElement).style.color = "#fff"}
+                onMouseLeave={e => (e.target as HTMLElement).style.color = "rgba(255,255,255,0.5)"}
+              >
+                {["Servicios", "Nosotros", "FAQ", "Contacto"][i]}
+              </a>
+            ))}
+          </div>
+          <Link href="/login" style={{background: "#fff", color: "#000", padding: "8px 18px", borderRadius: 8, fontSize: 13, fontWeight: 600, transition: "opacity 0.2s"}}
+            onMouseEnter={e => (e.target as HTMLElement).style.opacity = "0.85"}
+            onMouseLeave={e => (e.target as HTMLElement).style.opacity = "1"}
+          >
+            Acceder
+          </Link>
+        </div>
+      </motion.nav>
+
+      {/* Hero */}
+      <section ref={heroRef} style={{maxWidth: 1200, margin: "0 auto", padding: "80px 2rem 60px", textAlign: "center", position: "relative"}}>
+        <div style={{position: "absolute", top: 0, left: "50%", transform: "translateX(-50%)", width: 800, height: 400, background: "radial-gradient(ellipse at center, rgba(34,197,94,0.12) 0%, transparent 70%)", pointerEvents: "none"}} />
+
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, delay: 0.1 }}
+          style={{display: "inline-flex", alignItems: "center", gap: 8, background: "rgba(34,197,94,0.1)", border: "1px solid rgba(34,197,94,0.2)", borderRadius: 100, padding: "6px 16px", fontSize: 12, color: "#22c55e", marginBottom: 24}}
+        >
+          <span style={{width: 6, height: 6, borderRadius: "50%", background: "#22c55e", animation: "pulse 2s infinite"}} />
+          Nuevo portal de cliente disponible
+        </motion.div>
+
+        <motion.h1
+          initial={{ opacity: 0, y: 30 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, delay: 0.2 }}
+          style={{fontSize: "clamp(2.5rem, 6vw, 5rem)", fontWeight: 800, letterSpacing: "-0.04em", lineHeight: 1.05, marginBottom: 20}}
+        >
+          La nueva era de la<br />
+          <span style={{background: "linear-gradient(135deg, #22c55e, #16a34a)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent"}}>
+            gestion patrimonial
+          </span>
+        </motion.h1>
+
+        <motion.p
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, delay: 0.3 }}
+          style={{fontSize: 18, color: "rgba(255,255,255,0.45)", maxWidth: 520, margin: "0 auto 36px", lineHeight: 1.6}}
+        >
+          Accede a tu cartera en tiempo real. Recibe analisis exclusivos. Invierte con informacion clara y sin conflictos de interes.
+        </motion.p>
+
+        <motion.div
+          initial={{ opacity: 0, y: 16 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, delay: 0.4 }}
+          style={{display: "flex", alignItems: "center", justifyContent: "center", gap: 12, marginBottom: 16}}
+        >
+          <motion.a
+            href="#contacto"
+            whileHover={{ scale: 1.03 }}
+            whileTap={{ scale: 0.97 }}
+            style={{background: "#22c55e", color: "#000", padding: "14px 28px", borderRadius: 10, fontSize: 14, fontWeight: 700, boxShadow: "0 0 30px rgba(34,197,94,0.3)"}}
+          >
+            Solicitar informacion gratuita
+          </motion.a>
+          <motion.div whileHover={{ scale: 1.03 }}>
+            <Link href="/login" style={{border: "1px solid rgba(255,255,255,0.1)", color: "rgba(255,255,255,0.6)", padding: "14px 28px", borderRadius: 10, fontSize: 14, fontWeight: 500, display: "inline-block"}}>
+              Soy cliente →
+            </Link>
+          </motion.div>
+        </motion.div>
+        <p style={{fontSize: 12, color: "rgba(255,255,255,0.2)"}}>Primera consulta gratuita · Sin compromiso</p>
+
+        {/* Hero preview card */}
+        <motion.div
+          style={{ y: heroImageY }}
+          initial={{ opacity: 0, y: 40 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.8, delay: 0.6 }}
+        >
+          <div style={{marginTop: 60, background: "#141414", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 16, padding: 24, maxWidth: 700, margin: "60px auto 0", textAlign: "left", boxShadow: "0 40px 80px rgba(0,0,0,0.6)"}}>
+            <div style={{display: "flex", alignItems: "center", gap: 8, marginBottom: 20}}>
+              <div style={{width: 10, height: 10, borderRadius: "50%", background: "#ef4444"}} />
+              <div style={{width: 10, height: 10, borderRadius: "50%", background: "#f97316"}} />
+              <div style={{width: 10, height: 10, borderRadius: "50%", background: "#22c55e"}} />
+              <span style={{fontSize: 11, color: "rgba(255,255,255,0.2)", marginLeft: 8}}>portal.wmpatrimonial.com</span>
+            </div>
+            <div style={{display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12, marginBottom: 16}}>
+              {[{label: "Valor total", val: "€124.850", change: "+7,4%", color: "#22c55e"}, {label: "Rentab. YTD", val: "+7,4%", change: "+€8.640", color: "#22c55e"}, {label: "Perfil riesgo", val: "Moderado", change: "Revisado", color: "rgba(255,255,255,0.3)"}].map(s => (
+                <div key={s.label} style={{background: "#1a1a1a", border: "1px solid rgba(255,255,255,0.06)", borderRadius: 10, padding: 14}}>
+                  <p style={{fontSize: 10, color: "rgba(255,255,255,0.3)", marginBottom: 6, textTransform: "uppercase", letterSpacing: "0.08em"}}>{s.label}</p>
+                  <p style={{fontSize: 20, fontWeight: 700, letterSpacing: "-0.02em"}}>{s.val}</p>
+                  <p style={{fontSize: 11, color: s.color, marginTop: 4}}>{s.change}</p>
+                </div>
+              ))}
+            </div>
+            <div style={{background: "#1a1a1a", border: "1px solid rgba(255,255,255,0.06)", borderRadius: 10, padding: 14}}>
+              <p style={{fontSize: 10, color: "rgba(255,255,255,0.3)", marginBottom: 12, textTransform: "uppercase", letterSpacing: "0.08em"}}>Distribucion de cartera</p>
+              <div style={{display: "flex", flexDirection: "column", gap: 8}}>
+                {[{l: "Renta variable", p: 45, c: "#3b82f6"}, {l: "Renta fija", p: 35, c: "#22c55e"}, {l: "Liquidez", p: 12, c: "#f97316"}, {l: "Alternativos", p: 8, c: "#a855f7"}].map(item => (
+                  <div key={item.l} style={{display: "flex", alignItems: "center", gap: 10}}>
+                    <span style={{fontSize: 11, color: "rgba(255,255,255,0.4)", width: 100, flexShrink: 0}}>{item.l}</span>
+                    <div style={{flex: 1, height: 4, background: "rgba(255,255,255,0.06)", borderRadius: 2}}>
+                      <motion.div
+                        initial={{ width: 0 }}
+                        animate={{ width: `${item.p}%` }}
+                        transition={{ duration: 1.5, delay: 0.8, ease: "easeOut" }}
+                        style={{height: 4, background: item.c, borderRadius: 2}}
+                      />
+                    </div>
+                    <span style={{fontSize: 11, color: "rgba(255,255,255,0.4)", width: 28, textAlign: "right"}}>{item.p}%</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </motion.div>
+      </section>
+
+      {/* Stats */}
+      <section style={{borderTop: "1px solid rgba(255,255,255,0.06)", borderBottom: "1px solid rgba(255,255,255,0.06)", padding: "40px 2rem"}}>
+        <div style={{maxWidth: 1200, margin: "0 auto", display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 0}}>
+          {STATS.map((s, i) => (
+            <motion.div
+              key={s.label}
+              initial={{ opacity: 0, y: 16 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.4, delay: i * 0.08 }}
+              style={{textAlign: "center", padding: "20px 0", borderRight: i < 3 ? "1px solid rgba(255,255,255,0.06)" : "none"}}
+            >
+              <p style={{fontSize: 36, fontWeight: 800, letterSpacing: "-0.03em", marginBottom: 4}}>{s.value}</p>
+              <p style={{fontSize: 12, color: "rgba(255,255,255,0.35)", textTransform: "uppercase", letterSpacing: "0.1em"}}>{s.label}</p>
+            </motion.div>
+          ))}
+        </div>
+      </section>
+
+      {/* Features grid */}
+      <section id="servicios" style={{maxWidth: 1200, margin: "0 auto", padding: "80px 2rem"}}>
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.5 }}
+          style={{textAlign: "center", marginBottom: 56}}
+        >
+          <p style={{fontSize: 12, color: "#22c55e", textTransform: "uppercase", letterSpacing: "0.15em", marginBottom: 12}}>Servicios</p>
+          <h2 style={{fontSize: "clamp(1.8rem, 4vw, 3rem)", fontWeight: 800, letterSpacing: "-0.03em", marginBottom: 14}}>Todo lo que necesitas para gestionar tu patrimonio</h2>
+          <p style={{fontSize: 15, color: "rgba(255,255,255,0.4)", maxWidth: 480, margin: "0 auto"}}>Un servicio completo, personalizado y accesible desde cualquier dispositivo.</p>
+        </motion.div>
+
+        <div style={{display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 16}}>
+          {FEATURES.map((f, i) => (
+            <motion.div
+              key={f.title}
+              initial={{ opacity: 0, y: 24 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.5, delay: i * 0.07 }}
+              whileHover={{ scale: 1.02, borderColor: `${f.color}30` }}
+              style={{background: "#141414", border: "1px solid rgba(255,255,255,0.06)", borderRadius: 14, padding: 22, cursor: "default", transition: "all 0.2s"}}
+            >
+              <div style={{width: 38, height: 38, borderRadius: 10, background: `${f.color}15`, border: `1px solid ${f.color}25`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18, color: f.color, marginBottom: 14}}>
+                {f.icon}
+              </div>
+              <h3 style={{fontSize: 15, fontWeight: 700, marginBottom: 8, letterSpacing: "-0.01em"}}>{f.title}</h3>
+              <p style={{fontSize: 13, color: "rgba(255,255,255,0.4)", lineHeight: 1.6}}>{f.desc}</p>
+            </motion.div>
+          ))}
+        </div>
+      </section>
+
+      {/* Por que nosotros */}
+      <section id="nosotros" style={{background: "#111", borderTop: "1px solid rgba(255,255,255,0.06)", borderBottom: "1px solid rgba(255,255,255,0.06)", padding: "80px 2rem"}}>
+        <div style={{maxWidth: 1200, margin: "0 auto", display: "grid", gridTemplateColumns: "1fr 1fr", gap: 64, alignItems: "center"}}>
+          <motion.div
+            initial={{ opacity: 0, x: -30 }}
+            whileInView={{ opacity: 1, x: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.6 }}
+          >
+            <p style={{fontSize: 12, color: "#22c55e", textTransform: "uppercase", letterSpacing: "0.15em", marginBottom: 16}}>Por que elegirnos</p>
+            <h2 style={{fontSize: "clamp(1.8rem, 3.5vw, 2.8rem)", fontWeight: 800, letterSpacing: "-0.03em", lineHeight: 1.15, marginBottom: 24}}>
+              Independencia total.<br />
+              <span style={{color: "rgba(255,255,255,0.25)"}}>Sin conflictos de interes.</span>
+            </h2>
+            <div style={{display: "flex", flexDirection: "column", gap: 0}}>
+              {[
+                {title: "100% independiente", desc: "Sin vinculacion a bancos ni entidades. Solo trabajo para ti."},
+                {title: "Transparencia total", desc: "Comisiones claras. Rentabilidades reales. Sin sorpresas."},
+                {title: "Portal 24/7", desc: "Tu cartera siempre disponible desde cualquier dispositivo."},
+                {title: "Contacto directo", desc: "Hablas conmigo, no con un gestor de turno."},
+              ].map((item, i) => (
+                <motion.div
+                  key={item.title}
+                  initial={{ opacity: 0, x: -16 }}
+                  whileInView={{ opacity: 1, x: 0 }}
+                  viewport={{ once: true }}
+                  transition={{ duration: 0.4, delay: i * 0.08 }}
+                  style={{display: "flex", gap: 14, alignItems: "flex-start", padding: "16px 0", borderTop: "1px solid rgba(255,255,255,0.05)"}}
+                >
+                  <div style={{width: 20, height: 20, borderRadius: "50%", background: "rgba(34,197,94,0.1)", border: "1px solid rgba(34,197,94,0.2)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, fontSize: 10, color: "#22c55e", marginTop: 2}}>✓</div>
+                  <div>
+                    <p style={{fontSize: 14, fontWeight: 600, marginBottom: 3}}>{item.title}</p>
+                    <p style={{fontSize: 13, color: "rgba(255,255,255,0.4)", lineHeight: 1.5}}>{item.desc}</p>
+                  </div>
+                </motion.div>
+              ))}
+            </div>
+          </motion.div>
+
+          <motion.div
+            initial={{ opacity: 0, x: 30 }}
+            whileInView={{ opacity: 1, x: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.6, delay: 0.2 }}
+            style={{display: "flex", flexDirection: "column", gap: 12}}
+          >
+            {[
+              {icon: "◈", color: "#22c55e", title: "Actualizacion en tiempo real", desc: "Cada cambio en tu cartera se refleja inmediatamente en tu portal."},
+              {icon: "◎", color: "#3b82f6", title: "Notificaciones inmediatas", desc: "Recibe un aviso cuando tu asesor publica algo relevante para ti."},
+              {icon: "◇", color: "#a855f7", title: "Recomendaciones privadas", desc: "Solo tu puedes ver los productos que tu asesor te ha seleccionado."},
+            ].map((card, i) => (
+              <motion.div
+                key={card.title}
+                whileHover={{ borderColor: `${card.color}30`, scale: 1.01 }}
+                style={{background: "#141414", border: "1px solid rgba(255,255,255,0.06)", borderRadius: 12, padding: 18, display: "flex", gap: 14, alignItems: "flex-start", transition: "all 0.2s"}}
+              >
+                <div style={{width: 36, height: 36, borderRadius: 9, background: `${card.color}12`, border: `1px solid ${card.color}20`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, color: card.color, fontSize: 16}}>{card.icon}</div>
+                <div>
+                  <p style={{fontSize: 14, fontWeight: 600, marginBottom: 4}}>{card.title}</p>
+                  <p style={{fontSize: 12, color: "rgba(255,255,255,0.35)", lineHeight: 1.5}}>{card.desc}</p>
+                </div>
+              </motion.div>
+            ))}
+          </motion.div>
+        </div>
+      </section>
+
+      {/* FAQ */}
+      <section id="faq" style={{maxWidth: 800, margin: "0 auto", padding: "80px 2rem"}}>
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          style={{textAlign: "center", marginBottom: 48}}
+        >
+          <p style={{fontSize: 12, color: "#22c55e", textTransform: "uppercase", letterSpacing: "0.15em", marginBottom: 12}}>FAQ</p>
+          <h2 style={{fontSize: "clamp(1.8rem, 4vw, 2.8rem)", fontWeight: 800, letterSpacing: "-0.03em", marginBottom: 12}}>Preguntas frecuentes</h2>
+          <p style={{fontSize: 14, color: "rgba(255,255,255,0.35)"}}>
+            No encuentras lo que buscas?{" "}
+            <a href="#contacto" style={{color: "#22c55e"}}>Contactame.</a>
+          </p>
+        </motion.div>
+
+        <div style={{display: "flex", flexDirection: "column", gap: 0}}>
+          {FAQ.map((item, i) => (
+            <motion.div
+              key={i}
+              initial={{ opacity: 0, y: 12 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ delay: i * 0.06 }}
+              style={{borderTop: "1px solid rgba(255,255,255,0.06)", overflow: "hidden"}}
+            >
+              <button
+                onClick={() => setOpenFaq(openFaq === i ? null : i)}
+                style={{width: "100%", display: "flex", alignItems: "center", justifyContent: "space-between", padding: "20px 0", background: "none", border: "none", color: "#fff", cursor: "none", textAlign: "left"}}
+              >
+                <span style={{fontSize: 15, fontWeight: 600}}>{item.q}</span>
+                <motion.span
+                  animate={{ rotate: openFaq === i ? 45 : 0 }}
+                  transition={{ duration: 0.2 }}
+                  style={{fontSize: 20, color: "rgba(255,255,255,0.3)", flexShrink: 0}}
+                >+</motion.span>
+              </button>
+              <motion.div
+                initial={false}
+                animate={{ height: openFaq === i ? "auto" : 0, opacity: openFaq === i ? 1 : 0 }}
+                transition={{ duration: 0.3 }}
+                style={{overflow: "hidden"}}
+              >
+                <p style={{fontSize: 14, color: "rgba(255,255,255,0.45)", lineHeight: 1.7, paddingBottom: 20}}>{item.a}</p>
+              </motion.div>
+            </motion.div>
+          ))}
+          <div style={{borderTop: "1px solid rgba(255,255,255,0.06)"}} />
+        </div>
+      </section>
+
+      {/* CTA Banner */}
+      <section style={{padding: "0 2rem 80px"}}>
+        <motion.div
+          initial={{ opacity: 0, y: 30 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          style={{maxWidth: 1200, margin: "0 auto", background: "linear-gradient(135deg, #141414, #0f1f14)", border: "1px solid rgba(34,197,94,0.15)", borderRadius: 20, padding: "60px 48px", textAlign: "center", position: "relative", overflow: "hidden"}}
+        >
+          <div style={{position: "absolute", top: 0, left: "50%", transform: "translateX(-50%)", width: 600, height: 300, background: "radial-gradient(ellipse, rgba(34,197,94,0.1) 0%, transparent 70%)", pointerEvents: "none"}} />
+          <p style={{fontSize: 12, color: "#22c55e", textTransform: "uppercase", letterSpacing: "0.15em", marginBottom: 16, position: "relative"}}>Empezar</p>
+          <h2 style={{fontSize: "clamp(1.8rem, 4vw, 3.2rem)", fontWeight: 800, letterSpacing: "-0.03em", marginBottom: 14, position: "relative"}}>
+            Gestiona tu patrimonio<br />como merece.
+          </h2>
+          <p style={{fontSize: 15, color: "rgba(255,255,255,0.4)", marginBottom: 32, position: "relative"}}>Primera consulta gratuita. Sin compromiso.</p>
+          <motion.a
+            href="#contacto"
+            whileHover={{ scale: 1.04 }}
+            whileTap={{ scale: 0.97 }}
+            style={{background: "#22c55e", color: "#000", padding: "16px 36px", borderRadius: 10, fontSize: 14, fontWeight: 700, display: "inline-block", boxShadow: "0 0 40px rgba(34,197,94,0.3)", position: "relative"}}
+          >
+            Solicitar consulta gratuita
+          </motion.a>
+          <p style={{fontSize: 12, color: "rgba(255,255,255,0.2)", marginTop: 14, position: "relative"}}>Sin tarjeta de credito · Respondo en menos de 24h</p>
+        </motion.div>
+      </section>
+
+      {/* Contacto */}
+      <section id="contacto" style={{borderTop: "1px solid rgba(255,255,255,0.06)", padding: "80px 2rem"}}>
+        <div style={{maxWidth: 1200, margin: "0 auto", display: "grid", gridTemplateColumns: "1fr 1fr", gap: 64, alignItems: "start"}}>
+          <motion.div
+            initial={{ opacity: 0, x: -20 }}
+            whileInView={{ opacity: 1, x: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.6 }}
+          >
+            <p style={{fontSize: 12, color: "#22c55e", textTransform: "uppercase", letterSpacing: "0.15em", marginBottom: 16}}>Contacto</p>
+            <h2 style={{fontSize: "clamp(2rem, 4vw, 3.2rem)", fontWeight: 800, letterSpacing: "-0.03em", marginBottom: 14}}>Hablemos.</h2>
+            <p style={{fontSize: 15, color: "rgba(255,255,255,0.4)", lineHeight: 1.7, marginBottom: 32, maxWidth: 340}}>
+              Sin compromiso. Primera consulta gratuita. Te respondo en menos de 24 horas.
+            </p>
+            <div style={{display: "flex", flexDirection: "column", gap: 0}}>
+              {[
+                {label: "Experiencia", val: "+10 anos en gestion patrimonial"},
+                {label: "Clientes", val: "+50 familias e inversores"},
+                {label: "Patrimonio", val: "+10M euros bajo gestion"},
+              ].map(item => (
+                <div key={item.label} style={{display: "flex", gap: 20, padding: "14px 0", borderTop: "1px solid rgba(255,255,255,0.05)"}}>
+                  <span style={{fontSize: 11, textTransform: "uppercase", letterSpacing: "0.1em", color: "rgba(255,255,255,0.2)", width: 80, flexShrink: 0, paddingTop: 2}}>{item.label}</span>
+                  <span style={{fontSize: 13, color: "rgba(255,255,255,0.5)"}}>{item.val}</span>
+                </div>
+              ))}
+            </div>
+          </motion.div>
+
+          <motion.div
+            initial={{ opacity: 0, x: 20 }}
+            whileInView={{ opacity: 1, x: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.6, delay: 0.1 }}
+          >
+            <ContactFormWope />
+          </motion.div>
+        </div>
+      </section>
+
+      {/* Footer */}
+      <footer style={{borderTop: "1px solid rgba(255,255,255,0.06)", padding: "32px 2rem"}}>
+        <div style={{maxWidth: 1200, margin: "0 auto", display: "flex", alignItems: "center", justifyContent: "space-between"}}>
+          <div style={{display: "flex", alignItems: "center", gap: 8}}>
+            <div style={{width: 22, height: 22, borderRadius: 6, background: "linear-gradient(135deg, #22c55e, #16a34a)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, fontWeight: 700}}>W</div>
+            <span style={{fontSize: 13, color: "rgba(255,255,255,0.25)", fontWeight: 500}}>WM Patrimonial</span>
+          </div>
+          <div style={{display: "flex", gap: 24}}>
+            {[["#servicios","Servicios"],["#faq","FAQ"],["#contacto","Contacto"]].map(([href, label]) => (
+              <a key={href} href={href} style={{fontSize: 12, color: "rgba(255,255,255,0.2)", transition: "color 0.2s"}}
+                onMouseEnter={e => (e.target as HTMLElement).style.color = "rgba(255,255,255,0.6)"}
+                onMouseLeave={e => (e.target as HTMLElement).style.color = "rgba(255,255,255,0.2)"}
+              >{label}</a>
+            ))}
+            <Link href="/login" style={{fontSize: 12, color: "rgba(255,255,255,0.2)"}}>Acceso clientes</Link>
+          </div>
+          <span style={{fontSize: 12, color: "rgba(255,255,255,0.15)"}}>2026 WM Patrimonial</span>
+        </div>
+      </footer>
+
+      <style>{`
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
+      `}</style>
+    </div>
+  )
+}
+
+
+--- src\components\admin\AdminSidebar.tsx ---
+"use client"
+
+import Link from "next/link"
+import { usePathname, useRouter } from "next/navigation"
+import { createClient } from "@/lib/supabase/client"
+
+const nav = [
+  { href: "/admin", label: "Resumen", icon: "▦" },
+  { href: "/admin/clientes", label: "Clientes", icon: "◎" },
+  { href: "/admin/posts", label: "Noticias", icon: "◈" },
+  { href: "/admin/productos", label: "Productos", icon: "◇" },
+]
+
+export default function AdminSidebar() {
+  const pathname = usePathname()
+  const router = useRouter()
+  const supabase = createClient()
+
+  async function handleLogout() {
+    await supabase.auth.signOut()
+    router.push("/login")
+    router.refresh()
+  }
+
+  return (
+    <aside style={{position: "fixed", left: 0, top: 0, height: "100vh", width: 220, background: "#0D0D0D", borderRight: "1px solid rgba(255,255,255,0.06)", display: "flex", flexDirection: "column", zIndex: 40}}>
+      <div style={{padding: "20px 16px", borderBottom: "1px solid rgba(255,255,255,0.06)"}}>
+        <div style={{display: "flex", alignItems: "center", gap: 8}}>
+          <div style={{width: 28, height: 28, borderRadius: 8, background: "linear-gradient(135deg, #22c55e, #16a34a)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, fontWeight: 700, color: "#000"}}>W</div>
+          <div>
+            <p style={{fontSize: 13, fontWeight: 700, color: "#fff", letterSpacing: "-0.01em"}}>WM Patrimonial</p>
+            <p style={{fontSize: 10, color: "rgba(255,255,255,0.25)", textTransform: "uppercase", letterSpacing: "0.1em"}}>Admin</p>
+          </div>
+        </div>
+      </div>
+
+      <nav style={{flex: 1, padding: "12px 8px"}}>
+        {nav.map(item => {
+          const active = item.href === "/admin" ? pathname === "/admin" : pathname.startsWith(item.href)
+          return (
+            <Link
+              key={item.href}
+              href={item.href}
+              style={{
+                display: "flex", alignItems: "center", gap: 10, padding: "10px 12px", borderRadius: 8, fontSize: 13, fontWeight: 500, marginBottom: 2, transition: "all 0.15s",
+                background: active ? "rgba(34,197,94,0.1)" : "transparent",
+                color: active ? "#22c55e" : "rgba(255,255,255,0.45)",
+                border: active ? "1px solid rgba(34,197,94,0.2)" : "1px solid transparent",
+              }}
+            >
+              <span style={{fontSize: 14}}>{item.icon}</span>
+              {item.label}
+            </Link>
+          )
+        })}
+      </nav>
+
+      <div style={{padding: "12px 8px", borderTop: "1px solid rgba(255,255,255,0.06)"}}>
+        <button
+          onClick={handleLogout}
+          style={{width: "100%", display: "flex", alignItems: "center", gap: 10, padding: "10px 12px", borderRadius: 8, fontSize: 13, color: "rgba(255,255,255,0.3)", background: "none", border: "none", cursor: "pointer", transition: "color 0.15s", textAlign: "left"}}
+        >
+          Cerrar sesion
+        </button>
+      </div>
+    </aside>
+  )
+}
+
+
+--- src\components\admin\ClienteCarteraForm.tsx ---
+"use client"
+
+import { useState } from "react"
+
+const ASSET_LABELS: Record<string, string> = {
+  renta_variable: "Renta variable",
+  renta_fija: "Renta fija",
+  liquidez: "Liquidez",
+  alternativo: "Alternativo",
+}
+
+const RISK_LABELS: Record<string, string> = {
+  conservador: "Conservador",
+  moderado: "Moderado",
+  agresivo: "Agresivo",
+}
+
+interface Props {
+  clienteId: string
+  portfolio: any
+}
+
+export default function ClienteCarteraForm({ clienteId, portfolio }: Props) {
+  const [loading, setLoading] = useState(false)
+  const [saved, setSaved] = useState(false)
+  const [error, setError] = useState("")
+  const [totalValue, setTotalValue] = useState(portfolio?.total_value?.toString() || "0")
+  const [ytdReturn, setYtdReturn] = useState(portfolio?.ytd_return?.toString() || "0")
+  const [riskProfile, setRiskProfile] = useState(portfolio?.risk_profile || "moderado")
+  const [notes, setNotes] = useState(portfolio?.notes || "")
+  const [positions, setPositions] = useState(portfolio?.portfolio_positions || [])
+
+  const portfolioId = portfolio?.id || null
+
+  function addPosition() {
+    setPositions((prev: any[]) => [...prev, {
+      asset_name: "",
+      asset_type: "renta_variable",
+      value: 0,
+      weight_pct: 0,
+      return_pct: 0,
+      isin: "",
+    }])
+  }
+
+  function updatePosition(index: number, field: string, value: any) {
+    setPositions((prev: any[]) => prev.map((p: any, i: number) => i === index ? { ...p, [field]: value } : p))
+  }
+
+  function removePosition(index: number) {
+    setPositions((prev: any[]) => prev.filter((_: any, i: number) => i !== index))
+  }
+
+  async function handleSave() {
+    setLoading(true)
+    setSaved(false)
+    setError("")
+
+    const payload = {
+      portfolioId,
+      clienteId,
+      totalValue: parseFloat(totalValue) || 0,
+      ytdReturn: parseFloat(ytdReturn) || 0,
+      riskProfile,
+      notes,
+      positions: positions.filter((p: any) => p.asset_name),
+    }
+
+    console.log("Guardando payload:", JSON.stringify(payload))
+
+    const res = await fetch("/api/admin/cartera", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    })
+
+    const data = await res.json()
+    console.log("Respuesta:", JSON.stringify(data))
+
+    if (res.ok) {
+      setSaved(true)
+      setTimeout(() => {
+        window.location.reload()
+      }, 1000)
+    } else {
+      setError(data.error || "Error al guardar")
+    }
+
+    setLoading(false)
+  }
+
+  return (
+    <div className="bg-white rounded-xl border border-gray-200 p-6 space-y-6">
+
+
+      <div className="grid grid-cols-3 gap-4">
+        <div>
+          <label className="block text-xs font-medium text-gray-500 mb-1.5">Valor total (euro)</label>
+          <input
+            type="number"
+            value={totalValue}
+            onChange={e => setTotalValue(e.target.value)}
+            className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900"
+          />
+        </div>
+        <div>
+          <label className="block text-xs font-medium text-gray-500 mb-1.5">Rentabilidad YTD (%)</label>
+          <input
+            type="number"
+            step="0.01"
+            value={ytdReturn}
+            onChange={e => setYtdReturn(e.target.value)}
+            className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900"
+          />
+        </div>
+        <div>
+          <label className="block text-xs font-medium text-gray-500 mb-1.5">Perfil de riesgo</label>
+          <select
+            value={riskProfile}
+            onChange={e => setRiskProfile(e.target.value)}
+            className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900"
+          >
+            {Object.entries(RISK_LABELS).map(([val, label]) => (
+              <option key={val} value={val}>{label}</option>
+            ))}
+          </select>
+        </div>
+      </div>
+
+      <div>
+        <label className="block text-xs font-medium text-gray-500 mb-1.5">Notas internas</label>
+        <textarea
+          value={notes}
+          onChange={e => setNotes(e.target.value)}
+          rows={2}
+          placeholder="Observaciones sobre la cartera..."
+          className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900 resize-none"
+        />
+      </div>
+
+      <div>
+        <div className="flex items-center justify-between mb-3">
+          <label className="text-xs font-medium text-gray-500">Posiciones</label>
+          <button
+            onClick={addPosition}
+            className="text-xs text-gray-600 hover:text-gray-900 border border-gray-200 px-2 py-1 rounded-lg"
+          >
+            + Anadir posicion
+          </button>
+        </div>
+
+        {positions.length === 0 ? (
+          <p className="text-xs text-gray-400 text-center py-4 border border-dashed border-gray-200 rounded-lg">
+            Sin posiciones. Pulsa Anadir posicion para empezar.
+          </p>
+        ) : (
+          <div className="space-y-2">
+            {positions.map((pos: any, i: number) => (
+              <div key={i} className="grid grid-cols-12 gap-2 items-center">
+                <input
+                  className="col-span-3 px-2 py-1.5 rounded-lg border border-gray-200 text-xs focus:outline-none"
+                  placeholder="Nombre activo"
+                  value={pos.asset_name || ""}
+                  onChange={e => updatePosition(i, "asset_name", e.target.value)}
+                />
+                <select
+                  className="col-span-2 px-2 py-1.5 rounded-lg border border-gray-200 text-xs focus:outline-none"
+                  value={pos.asset_type || "renta_variable"}
+                  onChange={e => updatePosition(i, "asset_type", e.target.value)}
+                >
+                  {Object.entries(ASSET_LABELS).map(([val, label]) => (
+                    <option key={val} value={val}>{label}</option>
+                  ))}
+                </select>
+                <input
+                  className="col-span-2 px-2 py-1.5 rounded-lg border border-gray-200 text-xs focus:outline-none"
+                  placeholder="Valor euro"
+                  type="number"
+                  value={pos.value || ""}
+                  onChange={e => updatePosition(i, "value", parseFloat(e.target.value))}
+                />
+                <input
+                  className="col-span-1 px-2 py-1.5 rounded-lg border border-gray-200 text-xs focus:outline-none"
+                  placeholder="% peso"
+                  type="number"
+                  value={pos.weight_pct || ""}
+                  onChange={e => updatePosition(i, "weight_pct", parseFloat(e.target.value))}
+                />
+                <input
+                  className="col-span-1 px-2 py-1.5 rounded-lg border border-gray-200 text-xs focus:outline-none"
+                  placeholder="% rent"
+                  type="number"
+                  value={pos.return_pct || ""}
+                  onChange={e => updatePosition(i, "return_pct", parseFloat(e.target.value))}
+                />
+                <input
+                  className="col-span-2 px-2 py-1.5 rounded-lg border border-gray-200 text-xs focus:outline-none"
+                  placeholder="ISIN opcional"
+                  value={pos.isin || ""}
+                  onChange={e => updatePosition(i, "isin", e.target.value)}
+                />
+                <button
+                  onClick={() => removePosition(i)}
+                  className="col-span-1 text-red-400 hover:text-red-600 text-xs text-center"
+                >
+                  X
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      <div className="flex items-center gap-3 pt-2">
+        <button
+          onClick={handleSave}
+          disabled={loading}
+          className="bg-gray-900 text-white px-5 py-2 rounded-lg text-sm font-medium hover:bg-gray-800 disabled:opacity-40 transition-colors"
+        >
+          {loading ? "Guardando..." : "Guardar cartera"}
+        </button>
+        {saved && <span className="text-sm text-green-600">Guardado correctamente</span>}
+        {error && <span className="text-sm text-red-600">{error}</span>}
+      </div>
+    </div>
+  )
+}
+
+
+--- src\components\admin\ClienteProductosList.tsx ---
+'use client'
+
+import Link from 'next/link'
+import { useRouter } from 'next/navigation'
+import { createClient } from '@/lib/supabase/client'
+import type { Product, RiskLevel } from '@/lib/types'
+
+const RISK_COLORS: Record<RiskLevel, string> = {
+  bajo: 'bg-green-100 text-green-700',
+  moderado: 'bg-amber-100 text-amber-700',
+  alto: 'bg-orange-100 text-orange-700',
+  muy_alto: 'bg-red-100 text-red-700',
+}
+
+const RISK_LABELS: Record<RiskLevel, string> = {
+  bajo: 'Bajo',
+  moderado: 'Moderado',
+  alto: 'Alto',
+  muy_alto: 'Muy alto',
+}
+
+interface Props {
+  productos: Product[]
+  clienteId: string
+}
+
+export default function ClienteProductosList({ productos, clienteId }: Props) {
+  const router = useRouter()
+  const supabase = createClient()
+
+  async function handleDelete(id: string) {
+    if (!confirm('Â¿Eliminar este producto?')) return
+    await supabase.from('products').delete().eq('id', id)
+    router.refresh()
+  }
+
+  if (productos.length === 0) {
+    return (
+      <div className="bg-white rounded-xl border border-gray-200 p-8 text-center">
+        <p className="text-sm text-gray-400 mb-3">No hay productos asignados todavÃ­a</p>
+        <Link
+          href={`/admin/productos/nuevo?cliente=${clienteId}`}
+          className="text-sm text-gray-900 underline underline-offset-2"
+        >
+          Asignar primer producto
+        </Link>
+      </div>
+    )
+  }
+
+  return (
+    <div className="space-y-3">
+      {productos.map(p => (
+        <div
+          key={p.id}
+          className={`bg-white rounded-xl border p-5 ${p.is_priority ? 'border-blue-200' : 'border-gray-200'}`}
+        >
+          <div className="flex items-start justify-between mb-3">
+            <div>
+              <div className="flex items-center gap-2 mb-0.5">
+                {p.is_priority && (
+                  <span className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full">
+                    Prioritario
+                  </span>
+                )}
+                {p.interest_expressed && (
+                  <span className="text-xs bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full">
+                    Interesado
+                  </span>
+                )}
+              </div>
+              <h4 className="text-sm font-medium text-gray-900">{p.name}</h4>
+              {p.isin && <p className="text-xs text-gray-400">{p.isin} Â· {p.manager}</p>}
+            </div>
+            <div className="flex items-center gap-2">
+              <span className={`text-xs px-2 py-0.5 rounded-full ${RISK_COLORS[p.risk_level]}`}>
+                {RISK_LABELS[p.risk_level]}
+              </span>
+              <button
+                onClick={() => handleDelete(p.id)}
+                className="text-xs text-red-400 hover:text-red-600"
+              >
+                Eliminar
+              </button>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-4 gap-3 mb-3">
+            {p.estimated_return && (
+              <div className="bg-gray-50 rounded-lg p-2 text-center">
+                <p className="text-xs text-gray-400">Rentab. est.</p>
+                <p className="text-sm font-medium text-green-600">{p.estimated_return}</p>
+              </div>
+            )}
+            {p.min_horizon_years && (
+              <div className="bg-gray-50 rounded-lg p-2 text-center">
+                <p className="text-xs text-gray-400">Plazo mÃ­n.</p>
+                <p className="text-sm font-medium text-gray-900">{p.min_horizon_years} aÃ±os</p>
+              </div>
+            )}
+            {p.min_investment && (
+              <div className="bg-gray-50 rounded-lg p-2 text-center">
+                <p className="text-xs text-gray-400">Inv. mÃ­nima</p>
+                <p className="text-sm font-medium text-gray-900">â‚¬{p.min_investment.toLocaleString('es-ES')}</p>
+              </div>
+            )}
+            {p.management_fee && (
+              <div className="bg-gray-50 rounded-lg p-2 text-center">
+                <p className="text-xs text-gray-400">ComisiÃ³n</p>
+                <p className="text-sm font-medium text-gray-900">{p.management_fee}%</p>
+              </div>
+            )}
+          </div>
+
+          {p.advisor_note && (
+            <p className="text-xs text-gray-500 bg-gray-50 rounded-lg px-3 py-2 border-l-2 border-gray-300">
+              {p.advisor_note}
+            </p>
+          )}
+        </div>
+      ))}
+    </div>
+  )
+}
+
+--- src\components\dashboard\DashboardNav.tsx ---
+"use client"
+
+import Link from "next/link"
+import { usePathname, useRouter } from "next/navigation"
+import { createClient } from "@/lib/supabase/client"
+
+const nav = [
+  { href: "/dashboard", label: "Mi cartera" },
+  { href: "/dashboard/noticias", label: "Noticias" },
+  { href: "/dashboard/productos", label: "Productos" },
+  { href: "/dashboard/documentos", label: "Documentos" },
+]
+
+export default function DashboardNav({ fullName }: { fullName: string }) {
+  const pathname = usePathname()
+  const router = useRouter()
+  const supabase = createClient()
+
+  const initials = fullName.split(" ").map(n => n[0]).join("").slice(0, 2).toUpperCase()
+
+  async function handleLogout() {
+    await supabase.auth.signOut()
+    router.push("/login")
+    router.refresh()
+  }
+
+  return (
+    <header style={{background: "rgba(13,13,13,0.9)", backdropFilter: "blur(12px)", borderBottom: "1px solid rgba(255,255,255,0.06)", position: "sticky", top: 0, zIndex: 50}}>
+      <div style={{maxWidth: 1100, margin: "0 auto", padding: "0 24px", display: "flex", alignItems: "center", justifyContent: "space-between", height: 56}}>
+        <div style={{display: "flex", alignItems: "center", gap: 8}}>
+          <div style={{width: 24, height: 24, borderRadius: 6, background: "linear-gradient(135deg, #22c55e, #16a34a)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, fontWeight: 700, color: "#000"}}>W</div>
+          <span style={{fontSize: 13, fontWeight: 700, color: "#fff"}}>WM Patrimonial</span>
+        </div>
+
+        <nav style={{display: "flex", gap: 4}}>
+          {nav.map(item => {
+            const active = item.href === "/dashboard" ? pathname === "/dashboard" : pathname.startsWith(item.href)
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                style={{
+                  padding: "6px 14px", borderRadius: 8, fontSize: 13, fontWeight: 500, transition: "all 0.15s",
+                  background: active ? "rgba(34,197,94,0.1)" : "transparent",
+                  color: active ? "#22c55e" : "rgba(255,255,255,0.45)",
+                  border: active ? "1px solid rgba(34,197,94,0.2)" : "1px solid transparent",
+                }}
+              >
+                {item.label}
+              </Link>
+            )
+          })}
+        </nav>
+
+        <div style={{display: "flex", alignItems: "center", gap: 12}}>
+          <div style={{width: 30, height: 30, borderRadius: "50%", background: "rgba(34,197,94,0.1)", border: "1px solid rgba(34,197,94,0.2)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, fontWeight: 700, color: "#22c55e"}}>
+            {initials}
+          </div>
+          <button
+            onClick={handleLogout}
+            style={{fontSize: 12, color: "rgba(255,255,255,0.3)", background: "none", border: "none", cursor: "pointer"}}
+          >
+            Salir
+          </button>
+        </div>
+      </div>
+    </header>
+  )
+}
+
+
+--- src\components\dashboard\ProductoInteresButton.tsx ---
+'use client'
+
+import { useState } from 'react'
+
+export default function ProductoInteresButton({
+  productoId,
+  interesExpresado,
+}: {
+  productoId: string
+  interesExpresado: boolean
+}) {
+  const [enviado, setEnviado] = useState(interesExpresado)
+  const [loading, setLoading] = useState(false)
+
+  async function handleInteres() {
+    if (enviado) return
+    setLoading(true)
+
+    await fetch('/api/productos/interes', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ productoId }),
+    })
+
+    setEnviado(true)
+    setLoading(false)
+  }
+
+  if (enviado) {
+    return (
+      <div className="text-sm text-green-600 bg-green-50 px-4 py-2.5 rounded-lg inline-block">
+        Tu asesor ha sido notificado y se pondrÃ¡ en contacto contigo
+      </div>
+    )
+  }
+
+  return (
+    <button
+      onClick={handleInteres}
+      disabled={loading}
+      className="bg-gray-900 text-white px-5 py-2.5 rounded-lg text-sm font-medium hover:bg-gray-800 disabled:opacity-40 transition-colors"
+    >
+      {loading ? 'Enviando...' : 'Estoy interesado â€” contactar con mi asesor'}
+    </button>
+  )
+}
+
+--- src\components\CustomCursor.tsx ---
+"use client"
+
+import { useEffect, useRef, useState } from "react"
+import { motion } from "framer-motion"
+
+export default function CustomCursor() {
+  const [pos, setPos] = useState({ x: -100, y: -100 })
+  const [hovered, setHovered] = useState(false)
+  const [clicked, setClicked] = useState(false)
+
+  useEffect(() => {
+    const move = (e: MouseEvent) => setPos({ x: e.clientX, y: e.clientY })
+    const down = () => setClicked(true)
+    const up = () => setClicked(false)
+    window.addEventListener("mousemove", move)
+    window.addEventListener("mousedown", down)
+    window.addEventListener("mouseup", up)
+
+    const addHover = () => {
+      document.querySelectorAll("a, button, [data-cursor]").forEach(el => {
+        el.addEventListener("mouseenter", () => setHovered(true))
+        el.addEventListener("mouseleave", () => setHovered(false))
+      })
+    }
+    addHover()
+    const obs = new MutationObserver(addHover)
+    obs.observe(document.body, { childList: true, subtree: true })
+
+    return () => {
+      window.removeEventListener("mousemove", move)
+      window.removeEventListener("mousedown", down)
+      window.removeEventListener("mouseup", up)
+      obs.disconnect()
+    }
+  }, [])
+
+  return (
+    <>
+      {/* Dot */}
+      <motion.div
+        className="fixed top-0 left-0 w-1.5 h-1.5 bg-black rounded-full pointer-events-none z-[9999] mix-blend-difference"
+        animate={{ x: pos.x - 3, y: pos.y - 3, scale: clicked ? 0.5 : 1 }}
+        transition={{ type: "spring", stiffness: 2000, damping: 80, mass: 0.1 }}
+      />
+      {/* Circle */}
+      <motion.div
+        className="fixed top-0 left-0 rounded-full pointer-events-none z-[9998] border border-black/30 mix-blend-difference"
+        animate={{
+          x: pos.x - (hovered ? 24 : 16),
+          y: pos.y - (hovered ? 24 : 16),
+          width: hovered ? 48 : 32,
+          height: hovered ? 48 : 32,
+          scale: clicked ? 0.8 : 1,
+        }}
+        transition={{ type: "spring", stiffness: 400, damping: 40, mass: 0.3 }}
+      />
+    </>
+  )
+}
+
+
+--- src\components\SmoothScroll.tsx ---
+"use client"
+
+import { useEffect } from "react"
+
+export default function SmoothScroll({ children }: { children: React.ReactNode }) {
+  useEffect(() => {
+    let lenis: any
+    const init = async () => {
+      const Lenis = (await import("lenis")).default
+      lenis = new Lenis({ duration: 1.4, easing: (t: number) => Math.min(1, 1.001 - Math.pow(2, -10 * t)) })
+      const raf = (time: number) => { lenis.raf(time); requestAnimationFrame(raf) }
+      requestAnimationFrame(raf)
+    }
+    init()
+    return () => lenis?.destroy()
+  }, [])
+
+  return <>{children}</>
+}
+
+
+--- src\lib\supabase\client.ts ---
+import { createBrowserClient } from '@supabase/ssr'
+
+export function createClient() {
+  return createBrowserClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  )
+}
+
+--- src\lib\supabase\server.ts ---
+import { createServerClient } from '@supabase/ssr'
+import { cookies } from 'next/headers'
+
+export async function createClient() {
+  const cookieStore = await cookies()
+
+  return createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        getAll() { return cookieStore.getAll() },
+        setAll(cookiesToSet) {
+          try {
+            cookiesToSet.forEach(({ name, value, options }) =>
+              cookieStore.set(name, value, options)
+            )
+          } catch {}
+        },
+      },
+    }
+  )
+}
+
+--- src\lib\telegram.ts ---
+export async function sendTelegram(mensaje: string) {
+  const token = process.env.TELEGRAM_BOT_TOKEN
+  const chatId = process.env.TELEGRAM_CHAT_ID
+
+  if (!token || !chatId || token === "pendiente") return
+
+  await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      chat_id: chatId,
+      text: mensaje,
+      parse_mode: "Markdown",
+    }),
+  })
+}
+
+
+--- src\lib\types.ts ---
+export type Role = 'admin' | 'client'
+export type RiskProfile = 'conservador' | 'moderado' | 'agresivo'
+export type RiskLevel = 'bajo' | 'moderado' | 'alto' | 'muy_alto'
+export type AssetType = 'renta_variable' | 'renta_fija' | 'liquidez' | 'alternativo'
+export type PostCategory = 'mercados' | 'opinion' | 'informe' | 'aviso' | 'educacion'
+
+export interface Profile {
+  id: string
+  role: Role
+  full_name: string
+  email: string
+  phone?: string
+  avatar_url?: string
+  created_at: string
+}
+
+export interface Portfolio {
+  id: string
+  client_id: string
+  total_value: number
+  ytd_return: number
+  risk_profile: RiskProfile
+  last_updated: string
+  notes?: string
+}
+
+export interface PortfolioPosition {
+  id: string
+  portfolio_id: string
+  asset_name: string
+  asset_type: AssetType
+  value: number
+  weight_pct: number
+  return_pct: number
+  isin?: string
+}
+
+export interface Product {
+  id: string
+  client_id: string
+  name: string
+  isin?: string
+  manager?: string
+  estimated_return?: string
+  min_horizon_years?: number
+  min_investment?: number
+  management_fee?: number
+  risk_level: RiskLevel
+  advisor_note?: string
+  is_priority: boolean
+  is_visible: boolean
+  visible_from?: string
+  interest_expressed: boolean
+  interest_at?: string
+  created_at: string
+}
+
+export interface Post {
+  id: string
+  title: string
+  content: string
+  category: PostCategory
+  cover_url?: string
+  pdf_url?: string
+  published: boolean
+  published_at?: string
+  created_at: string
+}
+
+export interface Document {
+  id: string
+  client_id: string
+  product_id?: string
+  name: string
+  file_url: string
+  file_type: string
+  created_at: string
+}
+
+--- src\middleware.ts ---
+import { createServerClient } from "@supabase/ssr"
+import { NextResponse, type NextRequest } from "next/server"
+
+export async function middleware(request: NextRequest) {
+  let supabaseResponse = NextResponse.next({ request })
+
+  const supabase = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        getAll() { return request.cookies.getAll() },
+        setAll(cookiesToSet) {
+          cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value))
+          supabaseResponse = NextResponse.next({ request })
+          cookiesToSet.forEach(({ name, value, options }) =>
+            supabaseResponse.cookies.set(name, value, options)
+          )
+        },
+      },
+    }
+  )
+
+  const { data: { user } } = await supabase.auth.getUser()
+  const { pathname } = request.nextUrl
+
+  if (pathname.startsWith("/dashboard") && !user) {
+    return NextResponse.redirect(new URL("/login", request.url))
+  }
+
+  if (pathname.startsWith("/admin")) {
+    if (!user) return NextResponse.redirect(new URL("/login", request.url))
+    const { data: profile } = await supabase.from("profiles").select("role").eq("id", user.id).single()
+    if (profile?.role !== "admin") return NextResponse.redirect(new URL("/dashboard", request.url))
+  }
+
+  if (pathname === "/login" && user) {
+    const { data: profile } = await supabase.from("profiles").select("role").eq("id", user.id).single()
+    return NextResponse.redirect(new URL(profile?.role === "admin" ? "/admin" : "/dashboard", request.url))
+  }
+
+  return supabaseResponse
+}
+
+export const config = {
+  matcher: ["/dashboard/:path*", "/admin/:path*", "/login"],
+}
+

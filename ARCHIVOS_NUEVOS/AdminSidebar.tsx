@@ -1,4 +1,4 @@
-﻿"use client"
+"use client"
 
 import Link from "next/link"
 import { usePathname, useRouter } from "next/navigation"
@@ -126,10 +126,9 @@ export default function AdminSidebar() {
             padding: 0,
           }}
         >
-          Cerrar sesiÃ³n â†’
+          Cerrar sesión →
         </button>
       </div>
     </aside>
   )
 }
-

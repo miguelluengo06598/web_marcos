@@ -1,4 +1,4 @@
-﻿@import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,300;1,9..40,400&family=Space+Grotesk:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,300;1,9..40,400&family=Space+Grotesk:wght@400;500;600;700&display=swap');
 @import "tailwindcss";
 
 :root {
@@ -23,14 +23,14 @@
   --cyan-soft:  rgba(0, 212, 255, 0.10);
   --cyan-mid:   rgba(0, 212, 255, 0.20);
 
-  /* SemÃ¡nticos */
+  /* Semánticos */
   --green:   #00C98D;
   --red:     #FF4D6A;
   --amber:   #FFB800;
   --blue:    #3b82f6;
   --purple:  #a855f7;
 
-  /* TipografÃ­a */
+  /* Tipografía */
   --font-display: 'Space Grotesk', -apple-system, sans-serif;
   --font-body:    'DM Sans', -apple-system, sans-serif;
 }
@@ -50,4 +50,3 @@ a { color: inherit; text-decoration: none; }
 ::-webkit-scrollbar { width: 4px; }
 ::-webkit-scrollbar-track { background: var(--bg); }
 ::-webkit-scrollbar-thumb { background: var(--border-hover); border-radius: 2px; }
-

@@ -1,4 +1,4 @@
-﻿import { createClient } from "@/lib/supabase/server"
+import { createClient } from "@/lib/supabase/server"
 import { redirect } from "next/navigation"
 
 const ASSET_LABELS: Record<string, string> = {
@@ -46,10 +46,10 @@ export default async function DashboardPage() {
           fontFamily: "var(--font-display)",
           color: "var(--text)",
         }}>
-          Hola, {profile?.full_name?.split(" ")[0]} ðŸ‘‹
+          Hola, {profile?.full_name?.split(" ")[0]} 👋
         </h1>
         <p style={{ fontSize: 13, color: "var(--text-muted)" }}>
-          AquÃ­ tienes el estado actual de tu cartera
+          Aquí tienes el estado actual de tu cartera
         </p>
       </div>
 
@@ -61,12 +61,12 @@ export default async function DashboardPage() {
           padding: 48,
           textAlign: "center",
         }}>
-          <p style={{ fontSize: 32, marginBottom: 12 }}>â—Ž</p>
+          <p style={{ fontSize: 32, marginBottom: 12 }}>◎</p>
           <p style={{ fontSize: 15, fontWeight: 600, marginBottom: 8, fontFamily: "var(--font-display)" }}>
-            Tu cartera estÃ¡ en preparaciÃ³n
+            Tu cartera está en preparación
           </p>
           <p style={{ fontSize: 13, color: "var(--text-muted)" }}>
-            Tu asesor configurarÃ¡ tu cartera en breve. Pronto estarÃ¡ disponible aquÃ­.
+            Tu asesor configurará tu cartera en breve. Pronto estará disponible aquí.
           </p>
         </div>
       ) : (
@@ -76,7 +76,7 @@ export default async function DashboardPage() {
             {[
               {
                 label: "Valor total",
-                value: `â‚¬${Number(portfolio.total_value).toLocaleString("es-ES")}`,
+                value: `€${Number(portfolio.total_value).toLocaleString("es-ES")}`,
                 color: "#00D4FF",
                 sub: "EUR",
                 accent: true,
@@ -215,7 +215,7 @@ export default async function DashboardPage() {
                         color: "var(--text-muted)",
                         fontFamily: "var(--font-display)",
                       }}>
-                        â‚¬{Number(pos.value).toLocaleString("es-ES")}
+                        €{Number(pos.value).toLocaleString("es-ES")}
                       </td>
                       <td style={{
                         padding: "12px 18px",
@@ -272,4 +272,3 @@ export default async function DashboardPage() {
     </div>
   )
 }
-

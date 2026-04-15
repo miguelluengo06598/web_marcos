@@ -1,4 +1,4 @@
-﻿"use client"
+"use client"
 
 import Link from "next/link"
 import { usePathname, useRouter } from "next/navigation"
@@ -99,7 +99,7 @@ export default function DashboardNav({ fullName }: { fullName: string }) {
               background: "#00C98D",
               boxShadow: "0 0 6px rgba(0, 201, 141, 0.5)",
             }} />
-            <span style={{ fontSize: 11, color: "rgba(240,246,255,0.35)" }}>En lÃ­nea</span>
+            <span style={{ fontSize: 11, color: "rgba(240,246,255,0.35)" }}>En línea</span>
           </div>
           <div style={{
             width: 30,
@@ -134,4 +134,3 @@ export default function DashboardNav({ fullName }: { fullName: string }) {
     </header>
   )
 }
-

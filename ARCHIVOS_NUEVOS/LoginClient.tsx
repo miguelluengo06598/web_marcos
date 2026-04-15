@@ -1,4 +1,4 @@
-﻿"use client"
+"use client"
 
 import { useState } from "react"
 import { useRouter } from "next/navigation"
@@ -19,7 +19,7 @@ export default function LoginClient() {
     const { data, error } = await supabase.auth.signInWithPassword({ email, password })
 
     if (error) {
-      setError("Email o contraseÃ±a incorrectos")
+      setError("Email o contraseña incorrectos")
       setLoading(false)
       return
     }
@@ -75,10 +75,10 @@ export default function LoginClient() {
             fontFamily: "var(--font-display)",
             letterSpacing: "-0.02em",
           }}>
-            GestiÃ³n Patrimonial
+            Gestión Patrimonial
           </h1>
           <p style={{ fontSize: 13, color: "var(--text-muted)" }}>
-            Accede a tu Ã¡rea privada
+            Accede a tu área privada
           </p>
         </div>
 
@@ -128,7 +128,7 @@ export default function LoginClient() {
               />
             </div>
 
-            {/* ContraseÃ±a */}
+            {/* Contraseña */}
             <div>
               <label style={{
                 display: "block",
@@ -140,14 +140,14 @@ export default function LoginClient() {
                 textTransform: "uppercase",
                 letterSpacing: "0.08em",
               }}>
-                ContraseÃ±a
+                Contraseña
               </label>
               <input
                 type="password"
                 value={password}
                 onChange={e => setPassword(e.target.value)}
                 onKeyDown={e => e.key === "Enter" && handleLogin()}
-                placeholder="â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢"
+                placeholder="••••••••"
                 style={{
                   width: "100%",
                   padding: "10px 14px",
@@ -179,7 +179,7 @@ export default function LoginClient() {
               </div>
             )}
 
-            {/* BotÃ³n */}
+            {/* Botón */}
             <button
               onClick={handleLogin}
               disabled={loading || !email || !password}
@@ -213,10 +213,9 @@ export default function LoginClient() {
           color: "var(--text-dim)",
           marginTop: 20,
         }}>
-          Â¿Problemas para acceder? Contacta con tu asesor.
+          ¿Problemas para acceder? Contacta con tu asesor.
         </p>
       </div>
     </div>
   )
 }
-

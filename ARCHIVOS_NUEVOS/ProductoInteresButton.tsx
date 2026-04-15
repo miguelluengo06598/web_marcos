@@ -1,4 +1,4 @@
-﻿"use client"
+"use client"
 
 import { useState } from "react"
 import { createClient } from "@/lib/supabase/client"
@@ -43,7 +43,7 @@ export default function ProductoInteresButton({
         fontFamily: "var(--font-display)",
         fontWeight: 500,
       }}>
-        <span style={{ fontSize: 14 }}>âœ“</span>
+        <span style={{ fontSize: 14 }}>✓</span>
         Tu asesor ha sido notificado
       </div>
     )
@@ -69,8 +69,7 @@ export default function ProductoInteresButton({
         letterSpacing: "-0.01em",
       }}
     >
-      {loading ? "Enviando..." : "Estoy interesado â€” contactar con mi asesor"}
+      {loading ? "Enviando..." : "Estoy interesado — contactar con mi asesor"}
     </button>
   )
 }
-
