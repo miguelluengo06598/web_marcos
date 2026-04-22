@@ -76,3 +76,55 @@ export interface Document {
   file_type: string
   created_at: string
 }
+
+export interface PortfolioSnapshot {
+  id: string
+  client_id: string
+  capital_total: number
+  recorded_at: string
+}
+
+export interface InvestmentProduct {
+  id: string
+  name: string
+  description?: string
+  created_by?: string
+  created_at: string
+}
+
+export interface ClientProduct {
+  id: string
+  client_id: string
+  product_id: string
+  initial_investment: number
+  current_capital: number
+  created_at: string
+  investment_products?: InvestmentProduct
+}
+
+export interface ClientProductSnapshot {
+  id: string
+  client_product_id: string
+  capital_total: number
+  recorded_at: string
+}
+
+export type OperationType = 'buy' | 'sell'
+export type OperationResult = 'win' | 'loss'
+
+export interface Operation {
+  id: string
+  client_product_id: string
+  type: OperationType
+  points: number
+  action_price: number
+  result: OperationResult
+  notes?: string
+  operated_at: string
+  // Optional join — present when fetched with client_products(investment_products(*))
+  client_products?: {
+    investment_products?: {
+      name: string
+    }
+  }
+}

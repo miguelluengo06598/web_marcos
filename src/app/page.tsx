@@ -1,216 +1,370 @@
-﻿"use client"
+﻿import { createClient } from "@/lib/supabase/server"
+import { redirect } from "next/navigation"
 
-import Link from "next/link"
-import { motion } from "framer-motion"
-import { useState } from "react"
-import ContactForm from "./ContactForm"
-
-const fadeUp = {
-  hidden: { opacity: 0, y: 24 },
-  show: (i: number = 0) => ({ opacity: 1, y: 0, transition: { duration: 0.5, delay: i * 0.08, ease: "easeOut" } }),
+const ASSET_LABELS: Record<string, string> = {
+  renta_variable: "Renta variable",
+  renta_fija: "Renta fija",
+  liquidez: "Liquidez",
+  alternativo: "Alternativo",
 }
 
-export default function HomePage() {
-  const [menuOpen, setMenuOpen] = useState(false)
+const ASSET_COLORS: Record<string, string> = {
+  renta_variable: "#6366f1",
+  renta_fija:     "#12b76a",
+  liquidez:       "#f79009",
+  alternativo:    "#f97066",
+}
+
+const ASSET_BG: Record<string, string> = {
+  renta_variable: "rgba(99,102,241,0.10)",
+  renta_fija:     "rgba(18,183,106,0.10)",
+  liquidez:       "rgba(247,144,9,0.10)",
+  alternativo:    "rgba(249,112,102,0.10)",
+}
+
+const RISK_LABELS: Record<string, string> = {
+  conservador: "Conservador",
+  moderado:    "Moderado",
+  agresivo:    "Agresivo",
+}
+
+export default async function DashboardPage() {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) redirect("/login")
+
+  const { data: portfolio } = await supabase
+    .from("portfolios")
+    .select("*, portfolio_positions(*)")
+    .eq("client_id", user.id)
+    .single()
+
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("full_name")
+    .eq("id", user.id)
+    .single()
+
+  const positions = portfolio?.portfolio_positions || []
+  const firstName = profile?.full_name?.split(" ")[0] || ""
+  const now = new Date().toLocaleDateString("es-ES", { day: "numeric", month: "long", year: "numeric" })
+
+  const S: Record<string, React.CSSProperties> = {
+    label: {
+      fontSize: 10,
+      fontWeight: 700,
+      letterSpacing: "0.10em",
+      textTransform: "uppercase" as const,
+      color: "var(--text-muted)",
+      margin: "0 0 10px",
+      fontFamily: "DM Mono, monospace",
+    },
+    bigNum: {
+      fontFamily: "Plus Jakarta Sans, sans-serif",
+      fontWeight: 800,
+      fontSize: "clamp(26px, 4vw, 34px)",
+      color: "var(--text-primary)",
+      margin: "0 0 4px",
+      lineHeight: 1,
+    },
+    sub: { fontSize: 12, color: "var(--text-muted)", margin: 0 },
+  }
 
   return (
-    <div className="min-h-screen bg-white text-gray-900">
+    <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
 
-      {/* Nav */}
-      <nav className="border-b border-gray-100 bg-white sticky top-0 z-50">
-        <div className="max-w-5xl mx-auto px-4 sm:px-6 flex items-center justify-between h-14">
-          <span className="font-semibold text-gray-900 text-sm">Gestion Patrimonial</span>
-          <div className="hidden sm:flex items-center gap-6 text-sm text-gray-500">
-            <a href="#servicios" className="hover:text-gray-900 transition-colors">Servicios</a>
-            <a href="#nosotros" className="hover:text-gray-900 transition-colors">Nosotros</a>
-            <a href="#contacto" className="hover:text-gray-900 transition-colors">Contacto</a>
-            <Link href="/login" className="bg-gray-900 text-white px-4 py-2 rounded-lg text-xs font-medium hover:bg-gray-800 transition-colors">
-              Acceder
-            </Link>
-          </div>
-          <button className="sm:hidden p-2" onClick={() => setMenuOpen(!menuOpen)}>
-            <div className="w-5 h-0.5 bg-gray-600 mb-1" />
-            <div className="w-5 h-0.5 bg-gray-600 mb-1" />
-            <div className="w-5 h-0.5 bg-gray-600" />
-          </button>
+      {/* Header */}
+      <div className="card-enter card-enter-1" style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", flexWrap: "wrap", gap: 12, paddingBottom: 4 }}>
+        <div>
+          <p style={{ fontSize: 11, fontWeight: 700, color: "var(--accent)", letterSpacing: "0.10em", textTransform: "uppercase", margin: "0 0 6px", fontFamily: "DM Mono, monospace" }}>
+            Area privada
+          </p>
+          <h1 style={{ fontWeight: 800, fontSize: "clamp(22px, 4vw, 30px)", color: "var(--text-primary)", margin: "0 0 4px", lineHeight: 1.1 }}>
+            Hola, {firstName} 👋
+          </h1>
+          <p style={{ fontSize: 13, color: "var(--text-muted)", margin: 0 }}>{now}</p>
         </div>
-        {menuOpen && (
-          <div className="sm:hidden border-t border-gray-100 bg-white px-4 py-4 flex flex-col gap-4">
-            {["#servicios", "#nosotros", "#contacto"].map((href, i) => (
-              <a key={href} href={href} className="text-sm text-gray-600" onClick={() => setMenuOpen(false)}>
-                {["Servicios", "Nosotros", "Contacto"][i]}
-              </a>
-            ))}
-            <Link href="/login" className="bg-gray-900 text-white px-4 py-2 rounded-lg text-xs font-medium text-center">Acceder</Link>
-          </div>
-        )}
-      </nav>
-
-      {/* Hero */}
-      <section className="max-w-5xl mx-auto px-4 sm:px-6 pt-16 sm:pt-24 pb-16 text-center">
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}
-          className="inline-flex items-center gap-2 bg-gray-50 border border-gray-200 rounded-full px-4 py-1.5 mb-6 text-xs text-gray-500">
-          <span className="w-1.5 h-1.5 bg-green-500 rounded-full" />
-          Asesoramiento independiente
-        </motion.div>
-
-        <motion.h1 initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, delay: 0.1 }}
-          className="text-3xl sm:text-5xl lg:text-6xl font-semibold tracking-tight text-gray-900 mb-5 leading-tight">
-          Tu patrimonio,<br />
-          <span className="text-gray-300">gestionado con criterio</span>
-        </motion.h1>
-
-        <motion.p initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.2 }}
-          className="text-base sm:text-lg text-gray-400 mb-8 max-w-lg mx-auto leading-relaxed">
-          Accede a tu cartera en tiempo real. Recibe analisis del mercado. Invierte con informacion clara y sin sorpresas.
-        </motion.p>
-
-        <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.3 }}
-          className="flex flex-col sm:flex-row items-center justify-center gap-3">
-          <a href="#contacto" className="w-full sm:w-auto bg-gray-900 text-white px-6 py-3 rounded-xl text-sm font-medium hover:bg-gray-800 transition-colors text-center">
-            Solicitar informacion
-          </a>
-          <Link href="/login" className="w-full sm:w-auto border border-gray-200 text-gray-600 px-6 py-3 rounded-xl text-sm hover:bg-gray-50 transition-colors text-center">
-            Soy cliente →
-          </Link>
-        </motion.div>
-
-        {/* Stats */}
-        <motion.div variants={{ hidden: {}, show: { transition: { staggerChildren: 0.08 } } }} initial="hidden" animate="show"
-          className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-14 max-w-2xl mx-auto">
-          {[
-            { value: "+10", label: "Anos experiencia" },
-            { value: "+50", label: "Clientes activos" },
-            { value: "10M+", label: "Euros gestionados" },
-            { value: "8,2%", label: "Rentabilidad media" },
-          ].map((s, i) => (
-            <motion.div key={s.label} custom={i} variants={fadeUp}
-              className="bg-gray-50 border border-gray-100 rounded-xl p-4 text-center">
-              <p className="text-xl sm:text-2xl font-semibold text-gray-900 mb-1">{s.value}</p>
-              <p className="text-xs text-gray-400">{s.label}</p>
-            </motion.div>
-          ))}
-        </motion.div>
-      </section>
-
-      {/* Servicios */}
-      <section id="servicios" className="bg-gray-50 py-16 sm:py-24 border-t border-gray-100">
-        <div className="max-w-5xl mx-auto px-4 sm:px-6">
-          <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}
-            className="text-center mb-12">
-            <h2 className="text-2xl sm:text-3xl font-semibold text-gray-900 mb-3">Que ofrezco</h2>
-            <p className="text-gray-400 text-sm max-w-md mx-auto">Un servicio completo de gestion patrimonial adaptado a tus objetivos.</p>
-          </motion.div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            {[
-              { icon: "◎", title: "Planificacion patrimonial", desc: "Estrategias de inversion adaptadas a tus objetivos y horizonte temporal." },
-              { icon: "◈", title: "Gestion de carteras", desc: "Seleccion y seguimiento de activos con criterios de rentabilidad y control del riesgo." },
-              { icon: "◇", title: "Asesoramiento continuo", desc: "Acceso directo a tu asesor y actualizaciones del mercado en tu portal personal." },
-            ].map((s, i) => (
-              <motion.div key={s.title} custom={i} variants={fadeUp} initial="hidden" whileInView="show" viewport={{ once: true }}
-                className="bg-white border border-gray-200 rounded-2xl p-6 hover:border-gray-300 transition-colors">
-                <div className="w-10 h-10 bg-gray-100 rounded-xl flex items-center justify-center mb-4 text-lg">{s.icon}</div>
-                <h3 className="font-medium text-gray-900 mb-2 text-sm">{s.title}</h3>
-                <p className="text-xs text-gray-400 leading-relaxed">{s.desc}</p>
-              </motion.div>
-            ))}
-          </div>
+        <div
+          style={{
+            display: "flex", alignItems: "center", gap: 6,
+            background: "var(--green-light)",
+            border: "1px solid rgba(18,183,106,0.2)",
+            borderRadius: 20, padding: "8px 14px",
+            fontSize: 12, fontWeight: 600, color: "var(--green)",
+          }}
+        >
+          <span
+            className="pulse-dot"
+            style={{ width: 7, height: 7, borderRadius: "50%", background: "var(--green)", display: "block" }}
+          />
+          Cartera activa
         </div>
-      </section>
+      </div>
 
-      {/* Nosotros */}
-      <section id="nosotros" className="py-16 sm:py-24 border-t border-gray-100">
-        <div className="max-w-5xl mx-auto px-4 sm:px-6">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-16 items-center">
-            <motion.div initial={{ opacity: 0, x: -20 }} whileInView={{ opacity: 1, x: 0 }} viewport={{ once: true }} transition={{ duration: 0.6 }}>
-              <h2 className="text-2xl sm:text-3xl font-semibold text-gray-900 mb-6 leading-tight">
-                Sin conflictos de interes.<br />
-                <span className="text-gray-300">Solo tu patrimonio importa.</span>
-              </h2>
-              <div className="space-y-4">
-                {[
-                  "Sin vinculacion a ninguna entidad financiera. Recomiendo lo mejor para ti.",
-                  "Transparencia total en comisiones y rentabilidades. Sin sorpresas.",
-                  "Portal personal con tu cartera actualizada en tiempo real. 24/7.",
-                  "Atencion directa y personalizada. No eres un numero.",
-                ].map((item) => (
-                  <div key={item} className="flex gap-3 items-start">
-                    <span className="text-green-500 mt-0.5 flex-shrink-0 text-sm">✓</span>
-                    <p className="text-sm text-gray-500 leading-relaxed">{item}</p>
-                  </div>
-                ))}
-              </div>
-            </motion.div>
+      {!portfolio || portfolio.total_value === 0 ? (
+        <div className="card card-enter card-enter-2" style={{ padding: "64px 24px", textAlign: "center" }}>
+          <div
+            style={{
+              width: 56, height: 56, borderRadius: 16,
+              background: "var(--accent-light)", display: "flex",
+              alignItems: "center", justifyContent: "center",
+              margin: "0 auto 16px", fontSize: 26,
+            }}
+          >
+            ◎
+          </div>
+          <p style={{ fontWeight: 700, fontSize: 16, color: "var(--text-primary)", margin: "0 0 8px" }}>
+            Tu cartera esta en preparacion
+          </p>
+          <p style={{ fontSize: 13, color: "var(--text-muted)", maxWidth: 280, margin: "0 auto" }}>
+            Tu asesor configurara tu cartera en breve.
+          </p>
+        </div>
+      ) : (
+        <>
+          {/* KPI row */}
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
+              gap: 14,
+            }}
+          >
+            {/* Valor total — accent card */}
+            <div className="kpi-card-accent card-enter card-enter-2">
+              <div
+                style={{
+                  position: "absolute", top: -30, right: -30,
+                  width: 110, height: 110, borderRadius: "50%",
+                  background: "rgba(255,255,255,0.10)", pointerEvents: "none",
+                }}
+              />
+              <div
+                style={{
+                  position: "absolute", bottom: -20, left: -10,
+                  width: 80, height: 80, borderRadius: "50%",
+                  background: "rgba(255,255,255,0.06)", pointerEvents: "none",
+                }}
+              />
+              <p style={{ ...S.label, color: "rgba(255,255,255,0.65)" }}>Valor total</p>
+              <p className="animate-count" style={{ ...S.bigNum, color: "#fff" }}>
+                €{Number(portfolio.total_value).toLocaleString("es-ES")}
+              </p>
+              <p style={{ ...S.sub, color: "rgba(255,255,255,0.55)" }}>EUR · Valor de mercado</p>
+            </div>
 
-            <motion.div initial={{ opacity: 0, x: 20 }} whileInView={{ opacity: 1, x: 0 }} viewport={{ once: true }} transition={{ duration: 0.6, delay: 0.1 }}
-              className="bg-gray-50 border border-gray-200 rounded-2xl p-6">
-              <div className="bg-white border border-gray-200 rounded-xl p-4 mb-3">
-                <p className="text-xs text-gray-400 mb-1">Valor total cartera</p>
-                <p className="text-2xl font-semibold text-gray-900">124.850</p>
-                <p className="text-xs text-green-500 mt-1">+7,4% este ano</p>
+            {/* Rentabilidad */}
+            <div
+              className="kpi-card card-enter card-enter-3"
+              style={portfolio.ytd_return >= 0
+                ? { borderColor: "rgba(18,183,106,0.2)", background: "linear-gradient(135deg, rgba(18,183,106,0.05) 0%, #fff 60%)" }
+                : { borderColor: "rgba(240,68,56,0.2)",  background: "linear-gradient(135deg, rgba(240,68,56,0.05) 0%, #fff 60%)" }
+              }
+            >
+              <p style={S.label}>Rentabilidad YTD</p>
+              <div style={{ display: "flex", alignItems: "baseline", gap: 8 }}>
+                <p
+                  className="animate-count"
+                  style={{
+                    ...S.bigNum,
+                    color: portfolio.ytd_return >= 0 ? "var(--green)" : "var(--red)",
+                  }}
+                >
+                  {portfolio.ytd_return >= 0 ? "+" : ""}{portfolio.ytd_return}%
+                </p>
               </div>
-              <div className="grid grid-cols-2 gap-3">
-                {[
-                  { label: "Renta variable", pct: 45, color: "bg-blue-400" },
-                  { label: "Renta fija", pct: 35, color: "bg-green-400" },
-                ].map(item => (
-                  <div key={item.label} className="bg-white border border-gray-200 rounded-xl p-3">
-                    <p className="text-xs text-gray-400 mb-1">{item.label}</p>
-                    <p className="text-base font-semibold text-gray-900">{item.pct}%</p>
-                    <div className="mt-2 h-1 bg-gray-100 rounded-full overflow-hidden">
-                      <motion.div initial={{ width: 0 }} whileInView={{ width: `${item.pct}%` }} viewport={{ once: true }}
-                        transition={{ duration: 1.2, ease: "easeOut" }} className={`h-1 ${item.color} rounded-full`} />
+              <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 4 }}>
+                <span
+                  className={`badge ${portfolio.ytd_return >= 0 ? "badge-green" : "badge-red"}`}
+                  style={{ fontSize: 10 }}
+                >
+                  {portfolio.ytd_return >= 0 ? "▲ Positiva" : "▼ Negativa"}
+                </span>
+              </div>
+            </div>
+
+            {/* Perfil riesgo */}
+            <div
+              className="kpi-card card-enter card-enter-4"
+              style={{ borderColor: "rgba(99,102,241,0.15)", background: "linear-gradient(135deg, rgba(99,102,241,0.05) 0%, #fff 60%)" }}
+            >
+              <p style={S.label}>Perfil de riesgo</p>
+              <p className="animate-count" style={{ ...S.bigNum, textTransform: "capitalize" }}>
+                {RISK_LABELS[portfolio.risk_profile] || portfolio.risk_profile}
+              </p>
+              <span className="badge badge-accent" style={{ fontSize: 10, marginTop: 4, display: "inline-flex" }}>
+                Revisado con tu asesor
+              </span>
+            </div>
+          </div>
+
+          {/* Distribucion + posiciones */}
+          {positions.length > 0 && (
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))",
+                gap: 14,
+              }}
+            >
+              {/* Distribucion */}
+              <div className="card card-enter card-enter-3" style={{ padding: 20 }}>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 18 }}>
+                  <h3 style={{ fontWeight: 700, fontSize: 14, color: "var(--text-primary)", margin: 0 }}>
+                    Distribución
+                  </h3>
+                  <span className="badge badge-accent">{positions.length} posiciones</span>
+                </div>
+                <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+                  {positions.map((pos: any) => (
+                    <div key={pos.id}>
+                      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 6 }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                          <span
+                            style={{
+                              width: 8, height: 8, borderRadius: "50%", flexShrink: 0,
+                              background: ASSET_COLORS[pos.asset_type] || "#6366f1",
+                              display: "block",
+                              boxShadow: `0 0 5px ${ASSET_COLORS[pos.asset_type] || "#6366f1"}60`,
+                            }}
+                          />
+                          <span style={{ fontSize: 13, fontWeight: 600, color: "var(--text-primary)" }}>
+                            {pos.asset_name}
+                          </span>
+                        </div>
+                        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                          <span style={{ fontSize: 12, fontWeight: 700, color: pos.return_pct >= 0 ? "var(--green)" : "var(--red)", fontFamily: "DM Mono, monospace" }}>
+                            {pos.return_pct >= 0 ? "+" : ""}{pos.return_pct}%
+                          </span>
+                          <span style={{ fontSize: 11, color: "var(--text-muted)", fontFamily: "DM Mono, monospace", width: 30, textAlign: "right" }}>
+                            {pos.weight_pct}%
+                          </span>
+                        </div>
+                      </div>
+                      <div style={{ height: 6, background: "var(--border)", borderRadius: 4, overflow: "hidden" }}>
+                        <div
+                          style={{
+                            width: `${pos.weight_pct}%`, height: "100%", borderRadius: 4,
+                            background: `linear-gradient(90deg, ${ASSET_COLORS[pos.asset_type] || "#6366f1"}, ${ASSET_COLORS[pos.asset_type] || "#6366f1"}bb)`,
+                            transition: "width 1s cubic-bezier(0.22,1,0.36,1)",
+                          }}
+                        />
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  ))}
+                </div>
               </div>
-              <p className="text-xs text-gray-300 text-center mt-3">Vista previa del portal de cliente</p>
-            </motion.div>
+
+              {/* Posiciones */}
+              <div className="card card-enter card-enter-4" style={{ overflow: "hidden", padding: 0 }}>
+                <div style={{ padding: "16px 20px", borderBottom: "1px solid var(--border)", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                  <h3 style={{ fontWeight: 700, fontSize: 14, color: "var(--text-primary)", margin: 0 }}>Posiciones</h3>
+                </div>
+                <div>
+                  {positions.map((pos: any, i: number) => (
+                    <div
+                      key={pos.id}
+                      style={{
+                        padding: "12px 20px",
+                        display: "flex", alignItems: "center", justifyContent: "space-between",
+                        borderBottom: i < positions.length - 1 ? "1px solid var(--border)" : "none",
+                        transition: "background 0.15s",
+                        cursor: "default",
+                      }}
+                      onMouseEnter={e => ((e.currentTarget as HTMLElement).style.background = "var(--bg-card-2)")}
+                      onMouseLeave={e => ((e.currentTarget as HTMLElement).style.background = "transparent")}
+                    >
+                      <div style={{ display: "flex", alignItems: "center", gap: 12, minWidth: 0, flex: 1 }}>
+                        <div
+                          style={{
+                            width: 36, height: 36, borderRadius: 10, flexShrink: 0,
+                            background: ASSET_BG[pos.asset_type] || "var(--accent-light)",
+                            display: "flex", alignItems: "center", justifyContent: "center",
+                            fontSize: 14,
+                          }}
+                        >
+                          {pos.asset_type === "renta_variable" ? "📈"
+                           : pos.asset_type === "renta_fija" ? "🏦"
+                           : pos.asset_type === "liquidez" ? "💧" : "◆"}
+                        </div>
+                        <div style={{ minWidth: 0 }}>
+                          <p style={{ fontSize: 13, fontWeight: 600, color: "var(--text-primary)", margin: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                            {pos.asset_name}
+                          </p>
+                          <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 2 }}>
+                            <span
+                              style={{
+                                fontSize: 10, fontWeight: 600, padding: "2px 7px", borderRadius: 20,
+                                background: ASSET_BG[pos.asset_type] || "var(--accent-light)",
+                                color: ASSET_COLORS[pos.asset_type] || "var(--accent)",
+                              }}
+                            >
+                              {ASSET_LABELS[pos.asset_type] || pos.asset_type}
+                            </span>
+                            {pos.isin && (
+                              <span style={{ fontSize: 10, color: "var(--text-muted)", fontFamily: "DM Mono, monospace" }}>
+                                {pos.isin}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                      <div style={{ textAlign: "right", flexShrink: 0, marginLeft: 12 }}>
+                        <p style={{ fontSize: 13, fontWeight: 700, color: "var(--text-primary)", margin: 0, fontFamily: "DM Mono, monospace" }}>
+                          €{Number(pos.value).toLocaleString("es-ES")}
+                        </p>
+                        <p style={{ fontSize: 12, fontWeight: 700, color: pos.return_pct >= 0 ? "var(--green)" : "var(--red)", margin: 0, fontFamily: "DM Mono, monospace" }}>
+                          {pos.return_pct >= 0 ? "▲" : "▼"} {Math.abs(pos.return_pct)}%
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Nota asesor */}
+          {portfolio.notes && (
+            <div
+              className="card-enter card-enter-5"
+              style={{
+                background: "linear-gradient(135deg, var(--accent-light) 0%, rgba(129,140,248,0.06) 100%)",
+                border: "1px solid rgba(99,102,241,0.15)",
+                borderRadius: 20,
+                padding: 20,
+              }}
+            >
+              <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 10 }}>
+                <div
+                  style={{
+                    width: 32, height: 32, borderRadius: 10,
+                    background: "var(--accent-light)",
+                    display: "flex", alignItems: "center", justifyContent: "center",
+                    fontSize: 14,
+                  }}
+                >
+                  💬
+                </div>
+                <p style={{ fontSize: 10, fontWeight: 700, color: "var(--accent)", letterSpacing: "0.10em", textTransform: "uppercase", margin: 0, fontFamily: "DM Mono, monospace" }}>
+                  Nota de tu asesor
+                </p>
+              </div>
+              <p style={{ fontSize: 13, color: "var(--text-secondary)", lineHeight: 1.65, margin: 0 }}>
+                {portfolio.notes}
+              </p>
+            </div>
+          )}
+
+          {/* Ultima actualizacion */}
+          <div style={{ display: "flex", justifyContent: "flex-end", fontSize: 11, color: "var(--text-muted)", fontFamily: "DM Mono, monospace", gap: 6 }}>
+            <span>Última actualización:</span>
+            <span style={{ color: "var(--text-secondary)", fontWeight: 500 }}>
+              {new Date(portfolio.last_updated).toLocaleDateString("es-ES", { day: "numeric", month: "long", year: "numeric" })}
+            </span>
           </div>
-        </div>
-      </section>
-
-      {/* CTA */}
-      <section className="bg-gray-50 py-16 sm:py-24 border-t border-gray-100">
-        <div className="max-w-5xl mx-auto px-4 sm:px-6 text-center">
-          <motion.div initial={{ opacity: 0, y: 24 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.6 }}>
-            <h2 className="text-2xl sm:text-4xl font-semibold text-gray-900 mb-4 tracking-tight">
-              Empieza a gestionar tu patrimonio hoy
-            </h2>
-            <p className="text-gray-400 text-sm mb-8">Primera consulta gratuita y sin compromiso.</p>
-            <a href="#contacto" className="inline-block bg-gray-900 text-white px-8 py-3 rounded-xl text-sm font-medium hover:bg-gray-800 transition-colors">
-              Solicitar consulta gratuita
-            </a>
-          </motion.div>
-        </div>
-      </section>
-
-      {/* Contacto */}
-      <section id="contacto" className="py-16 sm:py-24 border-t border-gray-100">
-        <div className="max-w-lg mx-auto px-4 sm:px-6">
-          <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} className="text-center mb-8">
-            <h2 className="text-2xl sm:text-3xl font-semibold text-gray-900 mb-2">Hablemos</h2>
-            <p className="text-sm text-gray-400">Sin compromiso. Te respondo en menos de 24 horas.</p>
-          </motion.div>
-          <motion.div initial={{ opacity: 0, y: 16 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ delay: 0.1 }}>
-            <ContactForm />
-          </motion.div>
-        </div>
-      </section>
-
-      {/* Footer */}
-      <footer className="border-t border-gray-100 py-8">
-        <div className="max-w-5xl mx-auto px-4 sm:px-6 flex flex-col sm:flex-row items-center justify-between gap-4">
-          <span className="text-sm text-gray-300 font-medium">Gestion Patrimonial</span>
-          <div className="flex items-center gap-6 text-xs text-gray-300">
-            <a href="#servicios" className="hover:text-gray-600 transition-colors">Servicios</a>
-            <a href="#contacto" className="hover:text-gray-600 transition-colors">Contacto</a>
-            <Link href="/login" className="hover:text-gray-600 transition-colors">Acceso clientes</Link>
-          </div>
-        </div>
-      </footer>
-
+        </>
+      )}
     </div>
   )
 }

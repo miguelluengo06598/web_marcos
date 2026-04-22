@@ -3,7 +3,6 @@ import { createClient as createAdminClient } from '@supabase/supabase-js'
 import { NextResponse } from 'next/server'
 
 export async function POST(request: Request) {
-  // Verificar que quien llama es admin
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
@@ -18,9 +17,8 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'No autorizado' }, { status: 403 })
   }
 
-  const { full_name, email, password, phone } = await request.json()
+  const { full_name, email, password, phone, initial_investment } = await request.json()
 
-  // Usar service role para crear usuario sin verificación de email
   const adminSupabase = createAdminClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.SUPABASE_SERVICE_ROLE_KEY!
@@ -37,7 +35,6 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: authError.message }, { status: 400 })
   }
 
-  // Actualizar teléfono si se proporcionó
   if (phone && newUser.user) {
     await adminSupabase
       .from('profiles')
@@ -45,13 +42,13 @@ export async function POST(request: Request) {
       .eq('id', newUser.user.id)
   }
 
-  // Crear cartera vacía para el cliente
   if (newUser.user) {
     await adminSupabase.from('portfolios').insert({
       client_id: newUser.user.id,
       total_value: 0,
       ytd_return: 0,
       risk_profile: 'moderado',
+      initial_investment: initial_investment ?? 0,
     })
   }
 

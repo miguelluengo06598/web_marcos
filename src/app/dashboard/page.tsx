@@ -9,10 +9,10 @@ const ASSET_LABELS: Record<string, string> = {
 }
 
 const ASSET_COLORS: Record<string, string> = {
-  renta_variable: "#3b82f6",
-  renta_fija: "#10b981",
-  liquidez: "#f59e0b",
-  alternativo: "#8b5cf6",
+  renta_variable: "#00d4ff",
+  renta_fija: "#10d67e",
+  liquidez: "#f0b429",
+  alternativo: "#a78bfa",
 }
 
 const RISK_LABELS: Record<string, string> = {
@@ -44,103 +44,322 @@ export default async function DashboardPage() {
   const now = new Date().toLocaleDateString("es-ES", { day: "numeric", month: "long", year: "numeric" })
 
   return (
-    <div className="space-y-6">
+    <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
 
-      {/* Header saludo */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-2">
-        <div>
-          <p className="text-xs font-medium text-gray-400 uppercase tracking-widest mb-1">Area privada</p>
-          <h1 className="text-2xl sm:text-3xl font-semibold text-gray-900 tracking-tight">
-            Hola, {firstName} 👋
-          </h1>
-          <p className="text-sm text-gray-400 mt-1">{now}</p>
-        </div>
-        <div className="flex items-center gap-2 bg-green-50 border border-green-100 rounded-xl px-4 py-2.5 self-start sm:self-auto">
-          <span className="w-2 h-2 bg-green-400 rounded-full animate-pulse" />
-          <span className="text-xs font-medium text-green-700">Cartera activa</span>
-        </div>
+      {/* Header */}
+      <div
+        className="card-enter card-enter-1"
+        style={{ display: "flex", flexDirection: "column", gap: 4, paddingBottom: 8 }}
+      >
+        <p
+          style={{
+            fontSize: 10,
+            fontWeight: 600,
+            color: "var(--accent)",
+            letterSpacing: "0.12em",
+            textTransform: "uppercase",
+            margin: 0,
+            fontFamily: "DM Mono, monospace",
+          }}
+        >
+          Area privada
+        </p>
+        <h1
+          style={{
+            fontFamily: "Syne, sans-serif",
+            fontWeight: 700,
+            fontSize: "clamp(24px, 5vw, 36px)",
+            color: "var(--text-primary)",
+            margin: 0,
+            lineHeight: 1.1,
+          }}
+        >
+          Hola, {firstName} 👋
+        </h1>
+        <p style={{ fontSize: 13, color: "var(--text-muted)", margin: 0 }}>{now}</p>
       </div>
 
       {!portfolio || portfolio.total_value === 0 ? (
-        <div className="bg-white border border-gray-200 rounded-2xl p-12 text-center">
-          <div className="w-14 h-14 bg-gray-100 rounded-2xl flex items-center justify-center mx-auto mb-4 text-2xl">◎</div>
-          <p className="font-medium text-gray-900 mb-2">Tu cartera esta en preparacion</p>
-          <p className="text-sm text-gray-400 max-w-xs mx-auto">Tu asesor configurara tu cartera en breve. Pronto estara disponible aqui.</p>
+        <div
+          className="glass-card card-enter card-enter-2"
+          style={{ padding: "64px 24px", textAlign: "center" }}
+        >
+          <div
+            style={{
+              width: 56,
+              height: 56,
+              borderRadius: 16,
+              background: "rgba(0,212,255,0.1)",
+              border: "1px solid rgba(0,212,255,0.2)",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              margin: "0 auto 16px",
+              fontSize: 24,
+            }}
+          >
+            ◎
+          </div>
+          <p
+            style={{
+              fontFamily: "Syne, sans-serif",
+              fontWeight: 600,
+              fontSize: 16,
+              color: "var(--text-primary)",
+              margin: "0 0 8px",
+            }}
+          >
+            Tu cartera esta en preparacion
+          </p>
+          <p style={{ fontSize: 13, color: "var(--text-muted)", maxWidth: 280, margin: "0 auto" }}>
+            Tu asesor configurara tu cartera en breve. Pronto estara disponible aqui.
+          </p>
         </div>
       ) : (
         <>
           {/* KPI cards */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-
-            {/* Valor total — card grande destacada */}
-            <div className="sm:col-span-1 relative bg-gradient-to-br from-gray-900 to-gray-800 rounded-2xl p-6 overflow-hidden">
-              <div className="absolute top-0 right-0 w-32 h-32 bg-white/5 rounded-full -translate-y-8 translate-x-8" />
-              <div className="absolute bottom-0 left-0 w-20 h-20 bg-white/5 rounded-full translate-y-6 -translate-x-6" />
-              <div className="relative">
-                <p className="text-xs font-medium text-white/50 uppercase tracking-widest mb-3">Valor total</p>
-                <p className="text-3xl sm:text-4xl font-bold text-white tracking-tight mb-1">
-                  €{Number(portfolio.total_value).toLocaleString("es-ES")}
-                </p>
-                <p className="text-xs text-white/40">EUR · Valor de mercado</p>
-              </div>
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
+              gap: 16,
+            }}
+          >
+            {/* Valor total */}
+            <div
+              className="kpi-card card-enter card-enter-2"
+              style={{
+                background: "linear-gradient(135deg, rgba(0,212,255,0.12) 0%, rgba(0,100,160,0.08) 100%)",
+                borderColor: "rgba(0,212,255,0.2)",
+              }}
+            >
+              <div
+                style={{
+                  position: "absolute",
+                  top: -20,
+                  right: -20,
+                  width: 100,
+                  height: 100,
+                  borderRadius: "50%",
+                  background: "radial-gradient(circle, rgba(0,212,255,0.1) 0%, transparent 70%)",
+                  pointerEvents: "none",
+                }}
+              />
+              <p
+                style={{
+                  fontSize: 10,
+                  fontWeight: 600,
+                  color: "var(--accent)",
+                  letterSpacing: "0.1em",
+                  textTransform: "uppercase",
+                  margin: "0 0 12px",
+                  fontFamily: "DM Mono, monospace",
+                }}
+              >
+                Valor total
+              </p>
+              <p
+                className="animate-count"
+                style={{
+                  fontFamily: "Syne, sans-serif",
+                  fontWeight: 700,
+                  fontSize: "clamp(24px, 4vw, 32px)",
+                  color: "var(--text-primary)",
+                  margin: "0 0 4px",
+                  lineHeight: 1,
+                }}
+              >
+                €{Number(portfolio.total_value).toLocaleString("es-ES")}
+              </p>
+              <p style={{ fontSize: 11, color: "var(--text-muted)", margin: 0 }}>
+                EUR · Valor de mercado
+              </p>
             </div>
 
             {/* Rentabilidad */}
-            <div className={`relative rounded-2xl p-6 overflow-hidden ${portfolio.ytd_return >= 0 ? "bg-gradient-to-br from-emerald-500 to-emerald-600" : "bg-gradient-to-br from-red-500 to-red-600"}`}>
-              <div className="absolute top-0 right-0 w-28 h-28 bg-white/10 rounded-full -translate-y-6 translate-x-6" />
-              <div className="relative">
-                <p className="text-xs font-medium text-white/70 uppercase tracking-widest mb-3">Rentabilidad YTD</p>
-                <p className="text-3xl sm:text-4xl font-bold text-white tracking-tight mb-1">
-                  {portfolio.ytd_return >= 0 ? "+" : ""}{portfolio.ytd_return}%
-                </p>
-                <p className="text-xs text-white/60">{portfolio.ytd_return >= 0 ? "Rentabilidad positiva" : "Rentabilidad negativa"}</p>
-              </div>
+            <div
+              className={`kpi-card card-enter card-enter-3`}
+              style={{
+                background: portfolio.ytd_return >= 0
+                  ? "linear-gradient(135deg, rgba(16,214,126,0.12) 0%, rgba(0,100,60,0.08) 100%)"
+                  : "linear-gradient(135deg, rgba(255,77,106,0.12) 0%, rgba(120,0,30,0.08) 100%)",
+                borderColor: portfolio.ytd_return >= 0
+                  ? "rgba(16,214,126,0.2)"
+                  : "rgba(255,77,106,0.2)",
+              }}
+            >
+              <p
+                style={{
+                  fontSize: 10,
+                  fontWeight: 600,
+                  color: portfolio.ytd_return >= 0 ? "var(--green)" : "var(--red)",
+                  letterSpacing: "0.1em",
+                  textTransform: "uppercase",
+                  margin: "0 0 12px",
+                  fontFamily: "DM Mono, monospace",
+                }}
+              >
+                Rentabilidad YTD
+              </p>
+              <p
+                className="animate-count"
+                style={{
+                  fontFamily: "Syne, sans-serif",
+                  fontWeight: 700,
+                  fontSize: "clamp(24px, 4vw, 32px)",
+                  color: portfolio.ytd_return >= 0 ? "var(--green)" : "var(--red)",
+                  margin: "0 0 4px",
+                  lineHeight: 1,
+                }}
+              >
+                {portfolio.ytd_return >= 0 ? "+" : ""}{portfolio.ytd_return}%
+              </p>
+              <p style={{ fontSize: 11, color: "var(--text-muted)", margin: 0 }}>
+                {portfolio.ytd_return >= 0 ? "Rentabilidad positiva" : "Rentabilidad negativa"}
+              </p>
             </div>
 
             {/* Perfil riesgo */}
-            <div className="relative bg-gradient-to-br from-violet-500 to-purple-600 rounded-2xl p-6 overflow-hidden">
-              <div className="absolute top-0 right-0 w-28 h-28 bg-white/10 rounded-full -translate-y-6 translate-x-6" />
-              <div className="relative">
-                <p className="text-xs font-medium text-white/70 uppercase tracking-widest mb-3">Perfil de riesgo</p>
-                <p className="text-3xl sm:text-4xl font-bold text-white tracking-tight capitalize mb-1">
-                  {RISK_LABELS[portfolio.risk_profile] || portfolio.risk_profile}
-                </p>
-                <p className="text-xs text-white/60">Perfil revisado con tu asesor</p>
-              </div>
+            <div
+              className="kpi-card card-enter card-enter-4"
+              style={{
+                background: "linear-gradient(135deg, rgba(167,139,250,0.12) 0%, rgba(80,40,160,0.08) 100%)",
+                borderColor: "rgba(167,139,250,0.2)",
+              }}
+            >
+              <p
+                style={{
+                  fontSize: 10,
+                  fontWeight: 600,
+                  color: "#a78bfa",
+                  letterSpacing: "0.1em",
+                  textTransform: "uppercase",
+                  margin: "0 0 12px",
+                  fontFamily: "DM Mono, monospace",
+                }}
+              >
+                Perfil de riesgo
+              </p>
+              <p
+                className="animate-count"
+                style={{
+                  fontFamily: "Syne, sans-serif",
+                  fontWeight: 700,
+                  fontSize: "clamp(24px, 4vw, 32px)",
+                  color: "var(--text-primary)",
+                  margin: "0 0 4px",
+                  lineHeight: 1,
+                  textTransform: "capitalize",
+                }}
+              >
+                {RISK_LABELS[portfolio.risk_profile] || portfolio.risk_profile}
+              </p>
+              <p style={{ fontSize: 11, color: "var(--text-muted)", margin: 0 }}>
+                Perfil revisado con tu asesor
+              </p>
             </div>
           </div>
 
           {/* Distribucion + posiciones */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))",
+              gap: 16,
+            }}
+          >
             {/* Distribucion */}
             {positions.length > 0 && (
-              <div className="bg-white border border-gray-100 rounded-2xl p-5 shadow-sm">
-                <div className="flex items-center justify-between mb-5">
-                  <h3 className="text-sm font-semibold text-gray-900">Distribucion</h3>
-                  <span className="text-xs text-gray-400 bg-gray-50 border border-gray-100 px-2.5 py-1 rounded-full">
-                    {positions.length} posiciones
-                  </span>
+              <div className="glass-card card-enter card-enter-3" style={{ padding: "20px" }}>
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    marginBottom: 20,
+                  }}
+                >
+                  <h3
+                    style={{
+                      fontFamily: "Syne, sans-serif",
+                      fontWeight: 600,
+                      fontSize: 14,
+                      color: "var(--text-primary)",
+                      margin: 0,
+                    }}
+                  >
+                    Distribucion
+                  </h3>
+                  <span className="badge-accent">{positions.length} posiciones</span>
                 </div>
-                <div className="space-y-4">
+                <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
                   {positions.map((pos: any) => (
                     <div key={pos.id}>
-                      <div className="flex items-center justify-between mb-1.5">
-                        <div className="flex items-center gap-2">
-                          <span className="w-2 h-2 rounded-full flex-shrink-0" style={{background: ASSET_COLORS[pos.asset_type] || "#6b7280"}} />
-                          <span className="text-sm font-medium text-gray-700">{pos.asset_name}</span>
+                      <div
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "space-between",
+                          marginBottom: 6,
+                        }}
+                      >
+                        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                          <span
+                            style={{
+                              width: 8,
+                              height: 8,
+                              borderRadius: "50%",
+                              flexShrink: 0,
+                              background: ASSET_COLORS[pos.asset_type] || "#888",
+                              boxShadow: `0 0 6px ${ASSET_COLORS[pos.asset_type] || "#888"}80`,
+                              display: "block",
+                            }}
+                          />
+                          <span style={{ fontSize: 13, fontWeight: 500, color: "var(--text-primary)" }}>
+                            {pos.asset_name}
+                          </span>
                         </div>
-                        <div className="flex items-center gap-3">
-                          <span className={`text-xs font-medium ${pos.return_pct >= 0 ? "text-emerald-600" : "text-red-500"}`}>
+                        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                          <span
+                            style={{
+                              fontSize: 12,
+                              fontWeight: 600,
+                              color: pos.return_pct >= 0 ? "var(--green)" : "var(--red)",
+                              fontFamily: "DM Mono, monospace",
+                            }}
+                          >
                             {pos.return_pct >= 0 ? "+" : ""}{pos.return_pct}%
                           </span>
-                          <span className="text-xs text-gray-400 w-8 text-right">{pos.weight_pct}%</span>
+                          <span
+                            style={{
+                              fontSize: 11,
+                              color: "var(--text-muted)",
+                              fontFamily: "DM Mono, monospace",
+                              width: 32,
+                              textAlign: "right",
+                            }}
+                          >
+                            {pos.weight_pct}%
+                          </span>
                         </div>
                       </div>
-                      <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                      <div
+                        style={{
+                          height: 3,
+                          background: "rgba(255,255,255,0.06)",
+                          borderRadius: 2,
+                          overflow: "hidden",
+                        }}
+                      >
                         <div
-                          className="h-1.5 rounded-full transition-all duration-1000"
-                          style={{width: `${pos.weight_pct}%`, background: ASSET_COLORS[pos.asset_type] || "#6b7280"}}
+                          style={{
+                            width: `${pos.weight_pct}%`,
+                            height: "100%",
+                            borderRadius: 2,
+                            background: ASSET_COLORS[pos.asset_type] || "#888",
+                            boxShadow: `0 0 8px ${ASSET_COLORS[pos.asset_type] || "#888"}60`,
+                            transition: "width 1s ease",
+                          }}
                         />
                       </div>
                     </div>
@@ -151,25 +370,112 @@ export default async function DashboardPage() {
 
             {/* Posiciones tabla */}
             {positions.length > 0 && (
-              <div className="bg-white border border-gray-100 rounded-2xl overflow-hidden shadow-sm">
-                <div className="px-5 py-4 border-b border-gray-50">
-                  <h3 className="text-sm font-semibold text-gray-900">Posiciones</h3>
+              <div
+                className="glass-card card-enter card-enter-4"
+                style={{ overflow: "hidden", padding: 0 }}
+              >
+                <div
+                  style={{
+                    padding: "16px 20px",
+                    borderBottom: "1px solid var(--border)",
+                  }}
+                >
+                  <h3
+                    style={{
+                      fontFamily: "Syne, sans-serif",
+                      fontWeight: 600,
+                      fontSize: 14,
+                      color: "var(--text-primary)",
+                      margin: 0,
+                    }}
+                  >
+                    Posiciones
+                  </h3>
                 </div>
-                <div className="divide-y divide-gray-50">
-                  {positions.map((pos: any) => (
-                    <div key={pos.id} className="px-5 py-3.5 flex items-center justify-between hover:bg-gray-50/50 transition-colors">
-                      <div className="min-w-0 flex-1">
-                        <p className="text-sm font-medium text-gray-900 truncate">{pos.asset_name}</p>
-                        <div className="flex items-center gap-2 mt-0.5">
-                          <span className="text-[10px] font-medium px-1.5 py-0.5 rounded-full" style={{background: `${ASSET_COLORS[pos.asset_type]}15`, color: ASSET_COLORS[pos.asset_type] || "#6b7280"}}>
+                <div>
+                  {positions.map((pos: any, i: number) => (
+                    <div
+                      key={pos.id}
+                      style={{
+                        padding: "12px 20px",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "space-between",
+                        borderBottom: i < positions.length - 1 ? "1px solid var(--border)" : "none",
+                        transition: "background 0.15s",
+                      }}
+                      onMouseEnter={e => ((e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,0.03)")}
+                      onMouseLeave={e => ((e.currentTarget as HTMLElement).style.background = "transparent")}
+                    >
+                      <div style={{ minWidth: 0, flex: 1 }}>
+                        <p
+                          style={{
+                            fontSize: 13,
+                            fontWeight: 500,
+                            color: "var(--text-primary)",
+                            margin: 0,
+                            overflow: "hidden",
+                            textOverflow: "ellipsis",
+                            whiteSpace: "nowrap",
+                          }}
+                        >
+                          {pos.asset_name}
+                        </p>
+                        <div
+                          style={{
+                            display: "flex",
+                            alignItems: "center",
+                            gap: 8,
+                            marginTop: 3,
+                          }}
+                        >
+                          <span
+                            style={{
+                              fontSize: 10,
+                              fontWeight: 600,
+                              padding: "2px 7px",
+                              borderRadius: 20,
+                              background: `${ASSET_COLORS[pos.asset_type] || "#888"}18`,
+                              color: ASSET_COLORS[pos.asset_type] || "#888",
+                              letterSpacing: "0.02em",
+                            }}
+                          >
                             {ASSET_LABELS[pos.asset_type] || pos.asset_type}
                           </span>
-                          {pos.isin && <span className="text-[10px] text-gray-300 font-mono">{pos.isin}</span>}
+                          {pos.isin && (
+                            <span
+                              style={{
+                                fontSize: 10,
+                                color: "var(--text-muted)",
+                                fontFamily: "DM Mono, monospace",
+                              }}
+                            >
+                              {pos.isin}
+                            </span>
+                          )}
                         </div>
                       </div>
-                      <div className="text-right flex-shrink-0 ml-4">
-                        <p className="text-sm font-semibold text-gray-900">€{Number(pos.value).toLocaleString("es-ES")}</p>
-                        <p className={`text-xs font-medium ${pos.return_pct >= 0 ? "text-emerald-500" : "text-red-500"}`}>
+                      <div style={{ textAlign: "right", flexShrink: 0, marginLeft: 16 }}>
+                        <p
+                          style={{
+                            fontSize: 13,
+                            fontWeight: 600,
+                            color: "var(--text-primary)",
+                            margin: 0,
+                            fontFamily: "DM Mono, monospace",
+                          }}
+                        >
+                          €{Number(pos.value).toLocaleString("es-ES")}
+                        </p>
+                        <p
+                          style={{
+                            fontSize: 12,
+                            fontWeight: 600,
+                            color: pos.return_pct >= 0 ? "var(--green)" : "var(--red)",
+                            margin: 0,
+                            fontFamily: "DM Mono, monospace",
+                          }}
+                        >
                           {pos.return_pct >= 0 ? "+" : ""}{pos.return_pct}%
                         </p>
                       </div>
@@ -182,20 +488,70 @@ export default async function DashboardPage() {
 
           {/* Nota del asesor */}
           {portfolio.notes && (
-            <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-100 rounded-2xl p-5">
-              <div className="flex items-center gap-2 mb-3">
-                <div className="w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center text-xs">◎</div>
-                <p className="text-xs font-semibold text-blue-800 uppercase tracking-widest">Nota de tu asesor</p>
+            <div
+              className="card-enter card-enter-5"
+              style={{
+                background: "rgba(0,212,255,0.05)",
+                border: "1px solid rgba(0,212,255,0.15)",
+                borderRadius: 16,
+                padding: 20,
+              }}
+            >
+              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
+                <div
+                  style={{
+                    width: 24,
+                    height: 24,
+                    borderRadius: "50%",
+                    background: "rgba(0,212,255,0.15)",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    fontSize: 12,
+                    color: "var(--accent)",
+                  }}
+                >
+                  ◎
+                </div>
+                <p
+                  style={{
+                    fontSize: 10,
+                    fontWeight: 700,
+                    color: "var(--accent)",
+                    letterSpacing: "0.1em",
+                    textTransform: "uppercase",
+                    margin: 0,
+                    fontFamily: "DM Mono, monospace",
+                  }}
+                >
+                  Nota de tu asesor
+                </p>
               </div>
-              <p className="text-sm text-blue-900/70 leading-relaxed">{portfolio.notes}</p>
+              <p style={{ fontSize: 13, color: "var(--text-secondary)", lineHeight: 1.6, margin: 0 }}>
+                {portfolio.notes}
+              </p>
             </div>
           )}
 
           {/* Ultima actualizacion */}
-          <div className="flex items-center justify-end gap-2 text-xs text-gray-300">
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "flex-end",
+              alignItems: "center",
+              gap: 8,
+              fontSize: 11,
+              color: "var(--text-muted)",
+              fontFamily: "DM Mono, monospace",
+            }}
+          >
             <span>Ultima actualizacion:</span>
-            <span className="font-medium text-gray-400">
-              {new Date(portfolio.last_updated).toLocaleDateString("es-ES", { day: "numeric", month: "long", year: "numeric" })}
+            <span style={{ color: "var(--text-secondary)" }}>
+              {new Date(portfolio.last_updated).toLocaleDateString("es-ES", {
+                day: "numeric",
+                month: "long",
+                year: "numeric",
+              })}
             </span>
           </div>
         </>
